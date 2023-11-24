@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import time  # Import the time module
 
 # Function to get center of contour
 def centroid(contour):
@@ -19,6 +20,24 @@ color_ranges = [
 
 # Open camera
 cap = cv2.VideoCapture(0)  # Use 0 for the default camera
+
+# Set desired fps and resolution
+desired_fps = 30
+desired_width = 640
+desired_height = 480
+
+# Set camera properties
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
+cap.set(cv2.CAP_PROP_FPS, desired_fps)
+
+# Check if the camera properties were set correctly
+print("Actual FPS:", cap.get(cv2.CAP_PROP_FPS))
+print("Actual Resolution:", (cap.get(cv2.CAP_PROP_FRAME_WIDTH), cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+
+# Variables for controlling the frame rate
+fps_start_time = time.time()
+fps_interval = 1.0 / desired_fps
 
 while True:
     # Capture frame from camera
@@ -53,6 +72,12 @@ while True:
 
     # Display the result
     cv2.imshow("Tracking", frame)
+
+    # Control the frame rate
+    elapsed_time = time.time() - fps_start_time
+    if elapsed_time < fps_interval:
+        time.sleep(fps_interval - elapsed_time)
+    fps_start_time = time.time()
 
     # Break the loop if 'q' key is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
