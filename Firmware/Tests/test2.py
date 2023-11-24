@@ -4,17 +4,11 @@ import time
 import numpy as np
 
 picam2 = Picamera2()
-
-# Set the desired resolution
-input_width = 640
-input_height = 480
-
-# Set the desired FPS
-input_fps = 15
-
-picam2.preview_configuration.main.size = (input_width, input_height)
+dispW = 1280
+dispH = 720
+picam2.preview_configuration.main.size = (dispW, dispH)
 picam2.preview_configuration.main.format = "RGB888"
-picam2.preview_configuration.controls.FrameRate = input_fps
+picam2.preview_configuration.controls.FrameRate = 30
 picam2.preview_configuration.align()
 picam2.configure("preview")
 picam2.start()

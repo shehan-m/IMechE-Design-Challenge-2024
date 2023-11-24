@@ -21,12 +21,25 @@ color_ranges = [
     ((0, 0, 200), (255, 50, 255))  # White
 ]
 
-# Open camera
-cap = cv2.VideoCapture(0)  # Use 0 for the default camera
+# Open video file
+video_path = 'path/to/your/video/file.mp4'
+cap = cv2.VideoCapture(video_path)
+
+# Set desired FPS and resolution
+desired_fps = 30
+desired_width = 640
+desired_height = 480
+
+cap.set(cv2.CAP_PROP_FPS, desired_fps)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
 
 while True:
-    # Capture frame from camera
+    # Capture frame from video
     ret, frame = cap.read()
+
+    if not ret:
+        break
 
     # Convert frame to HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -66,6 +79,6 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# Release the camera and close the window
+# Release the video capture and close the window
 cap.release()
 cv2.destroyAllWindows()
