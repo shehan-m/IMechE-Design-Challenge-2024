@@ -2,5 +2,4 @@
 
 ### Prerequisites for firmware
 
-OpenCV - `sudo apt-get install python3-opencv`
-fswebcam - `sudo apt-get install fswebcam`
+OpenCV (`sudo apt-get install python3-opencv`) is need for target detection. fswebcam (`sudo apt-get install fswebcam`) is need if a webcam is used.
