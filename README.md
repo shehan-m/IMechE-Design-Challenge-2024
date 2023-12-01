@@ -1,1 +1,1 @@
-# IMechE-Design-Challenge-2024
+# IMechE Design Challenge 2024
