@@ -4,4 +4,5 @@ from stepper_motor import StepperMotorController
 td = TargetDetector()
 controller = StepperMotorController()
 
-td.detect_targets()
+while True:
+    pass
