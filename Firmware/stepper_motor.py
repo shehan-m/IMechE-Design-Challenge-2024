@@ -2,7 +2,7 @@ import RPi.GPIO as GPIO
 import time
 
 class StepperMotorController:
-    def __init__(self, step_pin, direction_pin, enable_pin=None):
+    def __init__(self, step_pin=, direction_pin, enable_pin=None):
         self.step_pin = step_pin
         self.direction_pin = direction_pin
         self.enable_pin = enable_pin
