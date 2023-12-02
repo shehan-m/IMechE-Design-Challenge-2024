@@ -25,7 +25,7 @@ while limit_switch_event():
 
 
 # Move back from wall
-controller.move()
+controller.move(-controller.get_total_steps())
 
 
 # Align datum with target
