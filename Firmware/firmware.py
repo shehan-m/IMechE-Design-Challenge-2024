@@ -8,5 +8,12 @@ def limit_switch_event():
 td = TargetDetector()
 controller = StepperMotorController()
 
+# Move to wall
 while True:
     controller.move(1000)
+
+# Move back from wall
+
+# Use target alignment
+
+# Move to next target
