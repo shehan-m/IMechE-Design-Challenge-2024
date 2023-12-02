@@ -19,12 +19,14 @@ consecutive_zeros = 0
 
 not_detected = True
 
-# Move to wall
+# Move to the wall
 while limit_switch_event():
-    controller.move(1000)
+    controller.move(100)
+
 
 # Move back from wall
 controller.move()
+
 
 # Align datum with target
 
@@ -53,4 +55,5 @@ while not_detected:
     else:
         consecutive_zeros = 0
 
-# Move to next target
+
+# Move to the next target
