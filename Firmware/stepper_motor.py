@@ -2,13 +2,14 @@ import RPi.GPIO as GPIO
 import time
 
 class StepperMotorController:
-    def __init__(self, step_pin=, direction_pin, enable_pin=None):
+    def __init__(self, step_pin, direction_pin, enable_pin=None):
         self.step_pin = step_pin
         self.direction_pin = direction_pin
         self.enable_pin = enable_pin
 
         self.current_position = 0
         self.target_position = 0
+        self.total_steps = 0
         self.speed = 0.0
         self.max_speed = 1000.0  # Set desired maximum speed
         self.acceleration = 1000.0  # Set desired acceleration
@@ -42,9 +43,11 @@ class StepperMotorController:
         self.acceleration = acceleration
 
     def move_to(self, absolute):
+        self.total_steps += abs(self.target_position - absolute)
         self.target_position = absolute
 
     def move(self, relative):
+        self.total_steps += abs(relative)
         self.target_position += relative
 
     def run(self):
@@ -80,6 +83,9 @@ class StepperMotorController:
 
     def is_running(self):
         return self.speed != 0.0
+    
+    def get_total_steps(self):
+        return self.total_steps
 
     def cleanup(self):
         GPIO.cleanup()

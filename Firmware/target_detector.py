@@ -21,6 +21,10 @@ class TargetDetector:
         self.fps_start_time = time.time()  # Initialize the start time for fps control
         self.fps_interval = 1.0 / self.desired_fps  # Calculate time interval for desired fps
 
+        self.y_displacement = 0
+
+        self.is_stopped = False  # Flag to stop the detection loop
+
         # Set the camera properties
         self.set_camera_properties()
 
@@ -49,6 +53,44 @@ class TargetDetector:
             return cx, cy
         else:
             return None
+
+    def stop_detection(self):
+        """
+        Stop the detection loop by setting the is_stopped flag.
+        """
+        self.is_stopped = True
+
+    def align_target(self):
+        while not self.is_stopped:
+            ret, frame = self.cap.read()
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+            centers = []
+            for color_range in self.color_ranges:
+                lower, upper = np.array(color_range[0]), np.array(color_range[1])
+                mask = cv2.inRange(hsv, lower, upper)
+                contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+                if contours:
+                    # Find the largest contour in the color range
+                    target_contour = max(contours, key=cv2.contourArea)
+                    center = self.centroid(target_contour)
+
+                    if center is not None:
+                        centers.append(center)
+                        screen_center = (frame.shape[1] // 2, frame.shape[0] // 2)
+
+                        self.y_displacement =  center[1] - screen_center[1]
+
+            elapsed_time = time.time() - self.fps_start_time
+            if elapsed_time < self.fps_interval:
+                time.sleep(self.fps_interval - elapsed_time)
+            self.fps_start_time = time.time()
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):  # Break the loop if 'q' key is pressed
+                break
+
+        self.release()
 
     def detect_targets(self):
         """
@@ -89,6 +131,9 @@ class TargetDetector:
                 break
 
         self.release()  # Release the video capture object
+
+    def get_y_displacement(self):
+        return self.y_displacement
 
     def release(self):
         """
