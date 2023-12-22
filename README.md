@@ -1,6 +1,6 @@
 # IMechE Design Challenge 2024
 
-### Download and use firmware
+### Download firmware
 OS: Raspberry Pi OS (Legacy, 32-bit) Lite
 
 * **Step 1:** \
@@ -16,6 +16,7 @@ Once git is installed, use the following command to clone the repo into home-dir
 ```shell
 cd ~ && git clone https://github.com/dw-0/kiauh.git
 ```
+
 
 ### Prerequisites for firmware
 
