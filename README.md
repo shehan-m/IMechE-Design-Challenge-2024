@@ -3,8 +3,11 @@
 ### Download and use firmware
 OS: Raspberry Pi OS (Legacy, 32-bit) Lite
 
+* **Step 1:** \
 To download this script, it is necessary to have git installed. If you don't have git already installed, or if you are unsure, run the following command:
-``` sudo apt-get update && sudo apt-get install git -y ```
+```shell
+sudo apt-get update && sudo apt-get install git -y
+```
 
 ### Prerequisites for firmware
 
