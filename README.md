@@ -1,6 +1,6 @@
 # IMechE Design Challenge 2024
 
-### Download firmware
+### Downloading firmware
 OS: Raspberry Pi OS (Legacy, 32-bit) Lite
 
 * **Step 1:** \
