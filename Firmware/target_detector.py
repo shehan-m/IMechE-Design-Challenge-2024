@@ -46,7 +46,7 @@ class TargetDetector:
             ret, frame = self.cap.read()
             if not ret:
                 logging.error("Failed to read frame, retrying...")
-                time.sleep(0.5)  # Wait a bit before retrying
+                time.sleep(0.5)
                 continue
 
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -61,14 +61,20 @@ class TargetDetector:
                     if center:
                         centers.append(center)
                         self.y_displacement = center[1] - (frame.shape[0] // 2)
+                        # Draw the contour and centroid for debuggingcx
+                        cv2.drawContours(frame, [target_contour], -1, (0, 255, 0), 2)
+                        cv2.circle(frame, center, 5, (255, 0, 0), -1)
 
-            # Additional processing or feedback mechanisms can be added here
+            cv2.imshow("Debug Stream", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
             if time.time() - self.fps_start_time < self.fps_interval:
                 time.sleep(self.fps_interval - (time.time() - self.fps_start_time))
             self.fps_start_time = time.time()
 
         self.release()
+        cv2.destroyAllWindows()
 
     def get_y_displacement(self):
         return self.y_displacement

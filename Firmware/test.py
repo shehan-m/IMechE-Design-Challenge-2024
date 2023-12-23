@@ -1,21 +1,17 @@
 from target_detector import TargetDetector
-import threading
 import time
 
 def run_alignment(detector):
     detector.align_target()
 
-detector = TargetDetector()
+detector = TargetDetector(2)
 
 max_consecutive_zeros = 5
 consecutive_zeros = 0
 
 not_detected = True
 
-detection_thread = threading.Thread(target=detector.align_target)
-detection_thread.start()
-
-
+detector.start_detection()
 
 # Use target alignment
 # Main thread continuously checks y_displacement
@@ -32,7 +28,6 @@ while not_detected:
         if consecutive_zeros >= max_consecutive_zeros:
             detector.stop_detection()
             not_detected = False
-            detection_thread.join()  # Wait for the thread to finish gracefully
             break
     else:
         consecutive_zeros = 0
