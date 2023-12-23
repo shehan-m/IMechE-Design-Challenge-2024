@@ -75,42 +75,63 @@ def main():
         if measure_distance() < SAFE_DISTANCE:
             motor_controller.set_speed(MIN_SPEED, -DELTA_V)
         
-        motor_controller.step(100*MS_RESOLUTION, 1)
+        motor_controller.step(100 * MS_RESOLUTION, 1)
 
     motor_controller.set_speed(MAX_SPEED, DELTA_V)
 
     while motor_controller.get_step_count > 0:
-        if motor_controller.get_step_count <= SAFE_DISTANCE:
+        if motor_controller.get_step_count <= SAFE_DISTANCE * MS_RESOLUTION:
             motor_controller.set_speed(MIN_SPEED, -DELTA_V)
 
-        motor_controller.step(100*MS_RESOLUTION, -1)
+        motor_controller.step(100 * MS_RESOLUTION, -1)
 
     # Align with target
     target_detector.start_detection # Start target detection
     target_detector.detect_targets()
-    while abs(target_detector.get_y_displacement()) > DATUM_OFFSET:
-        direction = -1 if target_detector.get_y_displacement() > 0 else 1
-        motor_controller.step(10*MS_RESOLUTION, direction)
+    
+    # Keep moving until y-displacement is constantly 0
+    consecutive_zero_count = 0
+    required_consecutive_zeros = 5
+
+    while consecutive_zero_count < required_consecutive_zeros:
+        y_displacement = target_detector.get_y_displacement()
+        if y_displacement == 0:
+            consecutive_zero_count += 1
+            # Pause briefly to allow for subsequent displacement measurement
+            time.sleep(0.1) 
+        else:
+            consecutive_zero_count = 0
+            direction = -1 if y_displacement > 0 else 1
+            motor_controller.step(10 * MS_RESOLUTION, direction)
 
     target_detector.stop_detection()  # Stop target detection
 
     time.sleep(PHASE_1_STOP_TIME)
 
-    motor_controller.step(300*MS_RESOLUTION, 1)
+    motor_controller.step(300 * MS_RESOLUTION, 1)
 
     # Move forward and look for next target
-    motor_controller.set_speed(MAX_SPEED, DELTA_V)
+    # motor_controller.set_speed(MAX_SPEED, DELTA_V)
     target_detector.start_detection()
     target_detector.detect_targets()  # Restart target detection for next target
     while True:
-        motor_controller.step(100*MS_RESOLUTION, 1)
-        if abs(target_detector.get_y_displacement()) <= DATUM_OFFSET:
+        motor_controller.step(100 * MS_RESOLUTION, 1)
+        if abs(target_detector.get_y_displacement()) <= -180:
             break
 
     # Align with next target
-    while abs(target_detector.get_y_displacement()) > DATUM_OFFSET:
-        direction = -1 if target_detector.get_y_displacement() > 0 else 1
-        motor_controller.step(10*MS_RESOLUTION, direction)
+    consecutive_zero_count = 0
+            
+    while consecutive_zero_count < required_consecutive_zeros:
+        y_displacement = target_detector.get_y_displacement()
+        if y_displacement == 0:
+            consecutive_zero_count += 1
+            # Pause briefly to allow for subsequent displacement measurement
+            time.sleep(0.1) 
+        else:
+            consecutive_zero_count = 0
+            direction = -1 if y_displacement > 0 else 1
+            motor_controller.step(10 * MS_RESOLUTION, direction)
 
     target_detector.stop_detection() # Stop target detector
     motor_controller.stop() # Stop once aligned
