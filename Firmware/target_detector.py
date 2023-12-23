@@ -64,10 +64,3 @@ class TargetDetector:
 
     def release(self):
         self.cap.release()
-
-# Usage example
-try:
-    detector = TargetDetector()
-    detector.detect_targets()
-except Exception as e:
-    logging.error(f"An error occurred: {e}")
