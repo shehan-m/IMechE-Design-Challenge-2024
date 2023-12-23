@@ -1,5 +1,14 @@
 # IMechE Design Challenge 2024
 
+## Electronics
+### Limit switch
+switch type: SPDT
+
+#### This switch has three terminals:
+1 - Common (COM): The common terminal
+2 - Normally Open (NO): Connected to COM when the switch is pressed
+3 - Normally Closed (NC): Connected to COM when the switch is not pressed
+
 ### Downloading firmware
 OS: Raspberry Pi OS (Legacy, 32-bit) Lite
 
