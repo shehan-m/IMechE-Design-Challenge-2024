@@ -2,9 +2,9 @@ from target_detector import TargetDetector
 import time
 
 def run_alignment(detector):
-    detector.align_target()
+    detector.detect_targets()
 
-detector = TargetDetector(2)
+detector = TargetDetector(2, 15, 320, 240, True)
 
 max_consecutive_zeros = 5
 consecutive_zeros = 0
@@ -31,3 +31,5 @@ while not_detected:
             break
     else:
         consecutive_zeros = 0
+
+print("done")

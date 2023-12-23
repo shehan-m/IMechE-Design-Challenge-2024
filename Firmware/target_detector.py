@@ -5,7 +5,7 @@ import logging
 import threading
 
 class TargetDetector:
-    def __init__(self, camera_index=0, desired_fps=30, desired_width=640, desired_height=480):
+    def __init__(self, camera_index=0, desired_fps=15, desired_width=320, desired_height=240, debug_mode=False):
         self.cap = self.initialize_camera(camera_index, desired_width, desired_height)
         self.desired_fps = desired_fps
         self.color_ranges = [((100, 100, 100), (120, 255, 255))]  # Example blue color range
@@ -13,17 +13,17 @@ class TargetDetector:
         self.fps_interval = 1.0 / self.desired_fps
         self.y_displacement = 0
         self.is_stopped = False
+        self.debug_mode = debug_mode
+        self.lock = threading.Lock()
 
     def initialize_camera(self, camera_index, width, height):
-        for attempt in range(3):
-            cap = cv2.VideoCapture(camera_index)
-            if cap.isOpened():
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-                return cap
-            time.sleep(1)  # Wait a bit before retrying
-        logging.error("Failed to open camera after several attempts")
-        raise Exception("Cannot open camera")
+        cap = cv2.VideoCapture(camera_index)
+        if not cap.isOpened():
+            logging.error("Failed to open camera")
+            raise Exception("Cannot open camera")
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        return cap
 
     def centroid(self, contour):
         M = cv2.moments(contour)
@@ -60,24 +60,30 @@ class TargetDetector:
                     center = self.centroid(target_contour)
                     if center:
                         centers.append(center)
-                        self.y_displacement = center[1] - (frame.shape[0] // 2)
-                        # Draw the contour and centroid for debuggingcx
-                        cv2.drawContours(frame, [target_contour], -1, (0, 255, 0), 2)
-                        cv2.circle(frame, center, 5, (255, 0, 0), -1)
+                        with self.lock:
+                            self.y_displacement = center[1] - (frame.shape[0] // 2)
+                        if self.debug_mode:
+                            # Draw the contour and centroid for debugging
+                            cv2.drawContours(frame, [target_contour], -1, (0, 255, 0), 2)
+                            cv2.circle(frame, center, 5, (255, 0, 0), -1)
 
-            cv2.imshow("Debug Stream", frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            if self.debug_mode:
+                cv2.imshow("Debug Stream", frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
 
             if time.time() - self.fps_start_time < self.fps_interval:
                 time.sleep(self.fps_interval - (time.time() - self.fps_start_time))
             self.fps_start_time = time.time()
 
         self.release()
-        cv2.destroyAllWindows()
+        if self.debug_mode:
+            cv2.destroyAllWindows()
 
     def get_y_displacement(self):
-        return self.y_displacement
+        with self.lock:
+            return self.y_displacement
 
     def release(self):
         self.cap.release()
+

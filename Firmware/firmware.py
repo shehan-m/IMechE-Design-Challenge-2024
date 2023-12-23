@@ -104,7 +104,7 @@ def main():
             direction = -1 if y_displacement > 0 else 1
             motor_controller.step(10 * MS_RESOLUTION, direction)
 
-    target_detector.stop_detection()  # Stop target detection
+    # target_detector.stop_detection()  # Stop target detection
 
     time.sleep(PHASE_1_STOP_TIME)
 
