@@ -1,71 +1,87 @@
 import RPi.GPIO as GPIO
 import time
+import logging
 
 class StepperMotorController:
     def __init__(self, step_pin, dir_pin, ms1_pin, ms2_pin, ms3_pin):
         self.step_pin = step_pin
         self.dir_pin = dir_pin
         self.ms_pins = [ms1_pin, ms2_pin, ms3_pin]
+        self.current_speed = 0.01  # Default speed, can be changed
+        self.moving = False
 
-        self.current_speed = 0.01  # Default speed, you can change this as needed
-
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.step_pin, GPIO.OUT)
-        GPIO.setup(self.dir_pin, GPIO.OUT)
-        for pin in self.ms_pins:
-            GPIO.setup(pin, GPIO.OUT)
+        try:
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(self.step_pin, GPIO.OUT)
+            GPIO.setup(self.dir_pin, GPIO.OUT)
+            for pin in self.ms_pins:
+                GPIO.setup(pin, GPIO.OUT)
+            logging.info("Stepper motor controller initialized")
+        except Exception as e:
+            logging.error("Error initializing stepper motor controller: %s", e)
+            raise
 
     def set_microstepping(self, resolution):
-        """
-        Set microstepping resolution.
-        resolution should be one of [1, 2, 4, 8, 16].
-        """
-        resolution_settings = {
+        if resolution not in [1, 2, 4, 8, 16]:
+            raise ValueError("Invalid resolution. Must be one of [1, 2, 4, 8, 16]")
+        settings = {
             1: (0, 0, 0),
             2: (1, 0, 0),
             4: (0, 1, 0),
             8: (1, 1, 0),
             16: (1, 1, 1)
         }
-        settings = resolution_settings.get(resolution, (0, 0, 0))
-        for pin, value in zip(self.ms_pins, settings):
+        for pin, value in zip(self.ms_pins, settings[resolution]):
             GPIO.output(pin, value)
 
-    def set_speed(self, speed):
-        """
-        Set the speed of the motor.
-        speed - delay between steps in seconds, smaller is faster.
-        """
-        self.current_speed = speed
+    def set_speed(self, speed, acceleration=None):
+        if not (0 < speed <= 1):
+            raise ValueError("Speed must be between 0 and 1")
+        self.target_speed = speed
+        if acceleration is not None:
+            if not (0 < acceleration <= 0.01):
+                raise ValueError("Acceleration must be between 0 and 0.01")
+            self.acceleration = acceleration
 
     def get_speed(self):
-        """
-        Get the current speed of the motor.
-        Returns the delay between steps in seconds.
-        """
         return self.current_speed
+    
+    def accelerate(self):
+        if self.current_speed < self.target_speed:
+            self.current_speed = min(self.current_speed + self.acceleration, self.target_speed)
+        elif self.current_speed > self.target_speed:
+            self.current_speed = max(self.current_speed - self.acceleration, self.target_speed)
 
     def step(self, steps, dir):
-        """
-        Move the motor.
-        steps - number of steps to move.
-        dir - direction, either 1 (forward) or -1 (backward).
-        """
+        if not isinstance(steps, int) or steps <= 0:
+            raise ValueError("Steps must be a positive integer")
+        if dir not in [1, -1]:
+            raise ValueError("Direction must be 1 (forward) or -1 (backward)")
+
         GPIO.output(self.dir_pin, GPIO.HIGH if dir > 0 else GPIO.LOW)
-        for _ in range(steps):
-            GPIO.output(self.step_pin, GPIO.HIGH)
-            time.sleep(self.get_speed())
-            GPIO.output(self.step_pin, GPIO.LOW)
-            time.sleep(self.get_speed())
+        self.moving = True
+        try:
+            for _ in range(steps):
+                self.accelerate()
+                GPIO.output(self.step_pin, GPIO.HIGH)
+                time.sleep(self.current_speed)
+                GPIO.output(self.step_pin, GPIO.LOW)
+                time.sleep(self.current_speed)
+        finally:
+            self.moving = False
+
+    def is_moving(self):
+        return self.moving
 
     def stop(self):
-        """
-        Immediately stop the motor by disabling the step pin.
-        """
         GPIO.output(self.step_pin, GPIO.LOW)
+        self.moving = False
 
     def cleanup(self):
-        """
-        Clean up by resetting the GPIO pins.
-        """
         GPIO.cleanup()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cleanup()
