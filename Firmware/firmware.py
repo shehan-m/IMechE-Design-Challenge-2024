@@ -34,7 +34,7 @@ GPIO.setup(LIMIT_SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(TRIG_PIN, GPIO.OUT)
 GPIO.setup(ECHO_PIN, GPIO.IN)
 
-# Initialize your motor controller and target detector here
+# Initialize motor controller and target detector
 motor_controller = StepperMotorController(step_pin=STEP_PIN, dir_pin=DIR_PIN, ms1_pin=MS1_PIN, ms2_pin=MS2_PIN, ms3_pin=MS3_PIN)
 motor_controller.set_microstepping(16)  # Set to 16 microsteps per step
 
@@ -62,27 +62,57 @@ def cleanup_gpio():
     GPIO.cleanup()
 
 def main():
-    motor_controller.set_microstepping(16)
     motor_controller.set_speed(MAX_SPEED, DELTA_V)
 
     limit_switch_pressed = False
 
+    # Move until limit switch is pressed or safe distance is reached
     while not limit_switch_pressed:
+        if GPIO.input(LIMIT_SWITCH_PIN) == GPIO.LOW:
+            limit_switch_pressed = True
+            break
+
         if measure_distance() < SAFE_DISTANCE:
             motor_controller.set_speed(MIN_SPEED, -DELTA_V)
         
-        motor_controller.step(100, 1)
+        motor_controller.step(100*MS_RESOLUTION, 1)
 
-    motor_controller.step(motor_controller.get_steps, -1)
+    motor_controller.set_speed(MAX_SPEED, DELTA_V)
 
-    # TODO: using y displacement given by target_detector move until y_displacement is constantly 0
+    while motor_controller.get_step_count > 0:
+        if motor_controller.get_step_count <= SAFE_DISTANCE:
+            motor_controller.set_speed(MIN_SPEED, -DELTA_V)
+
+        motor_controller.step(100*MS_RESOLUTION, -1)
+
+    # Align with target
+    target_detector.start_detection # Start target detection
+    target_detector.detect_targets()
+    while abs(target_detector.get_y_displacement()) > DATUM_OFFSET:
+        direction = -1 if target_detector.get_y_displacement() > 0 else 1
+        motor_controller.step(10*MS_RESOLUTION, direction)
+
+    target_detector.stop_detection()  # Stop target detection
 
     time.sleep(PHASE_1_STOP_TIME)
 
     motor_controller.step(300*MS_RESOLUTION, 1)
 
-    # TODO: move forward while looking for target once found align with it using same procedure as previously
+    # Move forward and look for next target
+    motor_controller.set_speed(MAX_SPEED, DELTA_V)
+    target_detector.start_detection()
+    target_detector.detect_targets()  # Restart target detection for next target
+    while True:
+        motor_controller.step(100*MS_RESOLUTION, 1)
+        if abs(target_detector.get_y_displacement()) <= DATUM_OFFSET:
+            break
 
+    # Align with next target
+    while abs(target_detector.get_y_displacement()) > DATUM_OFFSET:
+        direction = -1 if target_detector.get_y_displacement() > 0 else 1
+        motor_controller.step(10*MS_RESOLUTION, direction)
+
+    target_detector.stop_detection() # Stop target detector
     motor_controller.stop() # Stop once aligned
     cleanup_gpio()
 
