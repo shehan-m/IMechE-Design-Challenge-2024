@@ -15,13 +15,15 @@ class TargetDetector:
         self.is_stopped = False
 
     def initialize_camera(self, camera_index, width, height):
-        cap = cv2.VideoCapture(camera_index)
-        if not cap.isOpened():
-            logging.error("Cannot open camera")
-            raise Exception("Cannot open camera")
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        return cap
+        for attempt in range(3):
+            cap = cv2.VideoCapture(camera_index)
+            if cap.isOpened():
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+                return cap
+            time.sleep(1)  # Wait a bit before retrying
+        logging.error("Failed to open camera after several attempts")
+        raise Exception("Cannot open camera")
 
     def centroid(self, contour):
         M = cv2.moments(contour)
@@ -43,8 +45,9 @@ class TargetDetector:
         while not self.is_stopped:
             ret, frame = self.cap.read()
             if not ret:
-                logging.error("Failed to read frame")
-                break
+                logging.error("Failed to read frame, retrying...")
+                time.sleep(0.5)  # Wait a bit before retrying
+                continue
 
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             centers = []
