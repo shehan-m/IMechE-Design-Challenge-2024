@@ -1,6 +1,6 @@
-import RPi.GPIO as GPIO
 import time
 import logging
+import RPi.GPIO as GPIO
 
 class StepperMotorController:
     def __init__(self, step_pin, dir_pin, ms1_pin, ms2_pin, ms3_pin):
@@ -47,7 +47,7 @@ class StepperMotorController:
 
     def get_speed(self):
         return self.current_speed
-    
+
     def accelerate(self):
         if self.current_speed < self.target_speed:
             self.current_speed = min(self.current_speed + self.acceleration, self.target_speed)
