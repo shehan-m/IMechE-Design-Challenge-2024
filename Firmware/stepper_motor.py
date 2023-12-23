@@ -7,7 +7,9 @@ class StepperMotorController:
         self.step_pin = step_pin
         self.dir_pin = dir_pin
         self.ms_pins = [ms1_pin, ms2_pin, ms3_pin]
-        self.current_speed = 0.01  # Default speed, can be changed
+        self.current_speed = 0.01  # Default speed
+        self.target_speed = self.current_speed
+        self.acceleration = 0.0001  # Default acceleration
         self.moving = False
 
         try:
