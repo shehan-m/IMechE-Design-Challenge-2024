@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import time
 import logging
+import threading
 
 class TargetDetector:
     def __init__(self, camera_index=0, desired_fps=30, desired_width=640, desired_height=480):
@@ -28,8 +29,15 @@ class TargetDetector:
             return int(M['m10'] / M['m00']), int(M['m01'] / M['m00'])
         return None
 
+    def start_detection(self):
+        self.is_stopped = False
+        self.detection_thread = threading.Thread(target=self.detect_targets)
+        self.detection_thread.start()
+
     def stop_detection(self):
         self.is_stopped = True
+        if self.detection_thread is not None:
+            self.detection_thread.join()
 
     def detect_targets(self):
         while not self.is_stopped:
