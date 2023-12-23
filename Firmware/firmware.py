@@ -17,7 +17,7 @@ MS_RESOLUTION = 16 # Microstep resolution
 PHASE_1_STOP_TIME = 7.5
 
 # GPIO Pins
-LIMIT_SWITCH_PIN = 27
+LIMIT_SWITCH_PIN = 27 # NO Terminal
 
 TRIG_PIN = 17
 ECHO_PIN = 18
