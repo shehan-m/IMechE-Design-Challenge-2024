@@ -11,6 +11,7 @@ class StepperMotorController:
         self.target_speed = self.current_speed
         self.acceleration = 0.0001  # Default acceleration
         self.moving = False
+        self.step_count = 0  # Track the number of steps taken
 
         try:
             GPIO.setmode(GPIO.BCM)
@@ -69,8 +70,12 @@ class StepperMotorController:
                 time.sleep(self.current_speed)
                 GPIO.output(self.step_pin, GPIO.LOW)
                 time.sleep(self.current_speed)
+                self.step_count += dir  # Increment or decrement step count based on direction
         finally:
             self.moving = False
+    
+    def get_step_count(self):
+        return self.step_count
 
     def is_moving(self):
         return self.moving
