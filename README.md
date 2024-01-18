@@ -23,7 +23,7 @@ sudo apt-get update && sudo apt-get install git -y
 Once git is installed, use the following command to clone the repo into home-directory:
 
 ```shell
-cd ~ && git clone [https://github.com/dw-0/kiauh.git](https://github.com/shehan-m/IMechE-Design-Challenge-2024/
+cd ~ && git clone https://github.com/shehan-m/IMechE-Design-Challenge-2024/
 ```
 
 * **Step 2:** \
@@ -36,7 +36,3 @@ sudo apt-get install python3-opencv
 sudo apt-get install fswebcam
 ```
 
-
-### Prerequisites for firmware
-
-OpenCV (`sudo apt-get install python3-opencv`) is need for target detection. fswebcam (`sudo apt-get install fswebcam`) is need if a webcam is used.
