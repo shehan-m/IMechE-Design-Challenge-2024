@@ -11,6 +11,9 @@ MAX_SPEED = 0.001
 MIN_SPEED = 0.01
 DELTA_V = 0.0001 # accerlation/ deceleration
 
+STEP_DISTANCE = 100 # Increments taken between limitswitch checks
+ORIGIN_CLEARANCE = 300 # distance to clear first target from vision
+
 MS_RESOLUTION = 16 # Microstep resolution
 
 # Specification constants
@@ -75,7 +78,7 @@ def main():
         if measure_distance() < SAFE_DISTANCE:
             motor_controller.set_speed(MIN_SPEED, -DELTA_V)
         
-        motor_controller.step(100 * MS_RESOLUTION, 1)
+        motor_controller.step(STEP_DISTANCE * MS_RESOLUTION, 1)
 
     motor_controller.set_speed(MAX_SPEED, DELTA_V)
 
@@ -83,7 +86,7 @@ def main():
         if motor_controller.get_step_count() <= SAFE_DISTANCE * MS_RESOLUTION:
             motor_controller.set_speed(MIN_SPEED, -DELTA_V)
 
-        motor_controller.step(100 * MS_RESOLUTION, -1)
+        motor_controller.step(STEP_DISTANCE * MS_RESOLUTION, -1)
 
     # Align with target
     target_detector.start_detection # Start target detection
@@ -108,14 +111,14 @@ def main():
 
     time.sleep(PHASE_1_STOP_TIME)
 
-    motor_controller.step(300 * MS_RESOLUTION, 1)
+    motor_controller.step(ORIGIN_CLEARANCE * MS_RESOLUTION, 1)
 
     # Move forward and look for next target
     # motor_controller.set_speed(MAX_SPEED, DELTA_V)
     target_detector.start_detection()
     target_detector.detect_targets()  # Restart target detection for next target
     while True:
-        motor_controller.step(100 * MS_RESOLUTION, 1)
+        motor_controller.step(STEP_DISTANCE * MS_RESOLUTION, 1)
         if abs(target_detector.get_y_displacement()) <= -180:
             break
 
