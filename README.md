@@ -31,7 +31,7 @@ cd ~ && git clone https://github.com/shehan-m/IMechE-Design-Challenge-2024/
 ```
 
 ```shell
-cd ~ && git init firmware && cd firmware && git remote add -f origin https://github.com/shehan-m/IMechE-Design-Challenge-2024.git && git config core.sparseCheckout true && echo "firmware/" >> .git/info/sparse-checkout && git pull origin master
+cd ~ && git init firmware && cd firmware && git remote add -f origin https://github.com/shehan-m/IMechE-Design-Challenge-2024.git && git config core.sparseCheckout true && echo "Firmware/" >> .git/info/sparse-checkout && git pull origin master
 ```
 
 - **Step 2:** \
