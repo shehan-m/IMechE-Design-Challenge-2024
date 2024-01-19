@@ -1,5 +1,6 @@
 import time
 import logging
+import math
 import RPi.GPIO as GPIO
 
 class StepperMotorController:
@@ -67,9 +68,9 @@ class StepperMotorController:
             for _ in range(steps):
                 self.accelerate()
                 GPIO.output(self.step_pin, GPIO.HIGH)
-                time.sleep(self.current_speed)
+                time.sleep(abs(self.current_speed))
                 GPIO.output(self.step_pin, GPIO.LOW)
-                time.sleep(self.current_speed)
+                time.sleep(abs(self.current_speed))
                 self.step_count += dir  # Increment or decrement step count based on direction
         finally:
             self.moving = False

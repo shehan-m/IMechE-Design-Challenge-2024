@@ -7,8 +7,8 @@ import time
 SAFE_DISTANCE = 200 # Safe distance to start deceleration to min speed
 DATUM_OFFSET = 100 # Offset of datum from camera centre
 
-MAX_SPEED = 0.001
-MIN_SPEED = 0.01
+MAX_SPEED = 0.00001
+MIN_SPEED = 0.0001
 DELTA_V = 0.0001 # accerlation/ deceleration
 
 MS_RESOLUTION = 16 # Microstep resolution
@@ -75,8 +75,8 @@ while not limit_switch_pressed:
 
 motor_controller.set_speed(MAX_SPEED, DELTA_V)
 
-while motor_controller.get_step_count > 0:
-    if motor_controller.get_step_count <= SAFE_DISTANCE * MS_RESOLUTION:
+while motor_controller.get_step_count() > 0:
+    if motor_controller.get_step_count() <= SAFE_DISTANCE * MS_RESOLUTION:
         motor_controller.set_speed(MIN_SPEED, -DELTA_V)
 
     motor_controller.step(100 * MS_RESOLUTION, -1)

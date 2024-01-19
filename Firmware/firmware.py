@@ -79,8 +79,8 @@ def main():
 
     motor_controller.set_speed(MAX_SPEED, DELTA_V)
 
-    while motor_controller.get_step_count > 0:
-        if motor_controller.get_step_count <= SAFE_DISTANCE * MS_RESOLUTION:
+    while motor_controller.get_step_count() > 0:
+        if motor_controller.get_step_count() <= SAFE_DISTANCE * MS_RESOLUTION:
             motor_controller.set_speed(MIN_SPEED, -DELTA_V)
 
         motor_controller.step(100 * MS_RESOLUTION, -1)
