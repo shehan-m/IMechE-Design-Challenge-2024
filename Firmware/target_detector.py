@@ -68,8 +68,10 @@ class TargetDetector:
                             cv2.circle(frame, center, 5, (255, 0, 0), -1)
 
             if self.debug_mode:
+                # Ensure GUI operations are on the main thread or compatible thread
                 cv2.imshow("Debug Stream", frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
+                    self.stop_detection()
                     break
 
             if time.time() - self.fps_start_time < self.fps_interval:

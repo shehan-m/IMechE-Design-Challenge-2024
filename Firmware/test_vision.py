@@ -4,7 +4,7 @@ import time
 def run_alignment(detector):
     detector.detect_targets()
 
-detector = TargetDetector(0, 15, 320, 240, False)
+detector = TargetDetector(0, 15, 320, 240, True)
 
 max_consecutive_zeros = 5
 consecutive_zeros = 0
