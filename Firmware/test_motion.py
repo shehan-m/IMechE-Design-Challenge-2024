@@ -1,82 +1,36 @@
 import RPi.GPIO as GPIO
-from stepper_motor import StepperMotorController
-from target_detector import TargetDetector
 import time
 
-# Constants for navigation (Distances are in mm)
-SAFE_DISTANCE = 200 # Safe distance to start deceleration to min speed
-DATUM_OFFSET = 100 # Offset of datum from camera centre
-
-MAX_SPEED = 0.00001
-MIN_SPEED = 0.0001
-DELTA_V = 0.0001 # accerlation/ deceleration
-
-MS_RESOLUTION = 16 # Microstep resolution
-
-# Specification constants
-PHASE_1_STOP_TIME = 7.5
-
-# GPIO Pins
-LIMIT_SWITCH_PIN = 27 # NO Terminal
-
-TRIG_PIN = 17
-ECHO_PIN = 18
-
-STEP_PIN = 22
-DIR_PIN = 23
-MS1_PIN = 24
-MS2_PIN = 25
-MS3_PIN = 12
-
-# Setup GPIO mode and pins
+# Use Broadcom SOC Pin numbers
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(LIMIT_SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(TRIG_PIN, GPIO.OUT)
-GPIO.setup(ECHO_PIN, GPIO.IN)
 
-# Initialize motor controller and target detector
-motor_controller = StepperMotorController(step_pin=STEP_PIN, dir_pin=DIR_PIN, ms1_pin=MS1_PIN, ms2_pin=MS2_PIN, ms3_pin=MS3_PIN)
-motor_controller.set_microstepping(16)  # Set to 16 microsteps per step
+# Pins connected to the A4988 driver
+DIR_PIN = 20  # Direction GPIO Pin
+STEP_PIN = 21  # Step GPIO Pin
+# Set pin states
+GPIO.setup(DIR_PIN, GPIO.OUT)
+GPIO.setup(STEP_PIN, GPIO.OUT)
 
-def measure_distance():
-    GPIO.output(TRIG_PIN, True)
-    time.sleep(0.00001)
-    GPIO.output(TRIG_PIN, False)
+# Function to control the motor
+def rotate_motor(steps, direction):
+    GPIO.output(DIR_PIN, direction)  # Set the direction
+    for _ in range(steps):
+        GPIO.output(STEP_PIN, GPIO.HIGH)
+        time.sleep(0.001)  # Control speed of the steps
+        GPIO.output(STEP_PIN, GPIO.LOW)
+        time.sleep(0.001)
 
-    while GPIO.input(ECHO_PIN) == 0:
-        start_time = time.time()
+try:
+    while True:
+        direction = input("Enter direction (CW for clockwise, CCW for counterclockwise): ").upper()
+        if direction not in ["CW", "CCW"]:
+            print("Invalid direction. Please enter 'CW' or 'CCW'.")
+            continue
+        steps = int(input("Enter the number of steps: "))
+        rotate_motor(steps, GPIO.HIGH if direction == "CW" else GPIO.LOW)
 
-    while GPIO.input(ECHO_PIN) == 1:
-        stop_time = time.time()
+except KeyboardInterrupt:
+    print("Program terminated by the user")
 
-    time_elapsed = stop_time - start_time
-    distance = (time_elapsed * 343000) / 2  # Speed of sound in air (343000 mm/s)
-    
-    return distance # distance in mm
-
-def cleanup_gpio():
-    motor_controller.cleanup()
-    GPIO.cleanup()
-
-motor_controller.set_speed(MAX_SPEED, DELTA_V)
-
-limit_switch_pressed = False
-
-# Move until limit switch is pressed or safe distance is reached
-while not limit_switch_pressed:
-    if GPIO.input(LIMIT_SWITCH_PIN) == GPIO.LOW:
-        limit_switch_pressed = True
-        break
-
-    if measure_distance() < SAFE_DISTANCE:
-        motor_controller.set_speed(MIN_SPEED, -DELTA_V)
-    
-    motor_controller.step(100 * MS_RESOLUTION, 1)
-
-motor_controller.set_speed(MAX_SPEED, DELTA_V)
-
-while motor_controller.get_step_count() > 0:
-    if motor_controller.get_step_count() <= SAFE_DISTANCE * MS_RESOLUTION:
-        motor_controller.set_speed(MIN_SPEED, -DELTA_V)
-
-    motor_controller.step(100 * MS_RESOLUTION, -1)
+finally:
+    GPIO.cleanup()  # Clean up GPIO to reset pin modes
