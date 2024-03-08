@@ -7,27 +7,44 @@ GPIO.setmode(GPIO.BCM)
 # Pins connected to the A4988 driver
 DIR_PIN = 20  # Direction GPIO Pin
 STEP_PIN = 21  # Step GPIO Pin
+# Limit switch pin
+LIMIT_SWITCH_PIN = 16  # GPIO Pin connected to the limit switch
+
 # Set pin states
 GPIO.setup(DIR_PIN, GPIO.OUT)
 GPIO.setup(STEP_PIN, GPIO.OUT)
+GPIO.setup(LIMIT_SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Enable internal pull-up resistor
 
-# Function to control the motor
-def rotate_motor(steps, direction):
-    GPIO.output(DIR_PIN, direction)  # Set the direction
+# Function to rotate the motor
+def rotate_motor(direction, delay=0.001):
+    GPIO.output(DIR_PIN, direction)
+    while True:
+        GPIO.output(STEP_PIN, GPIO.HIGH)
+        time.sleep(delay)
+        GPIO.output(STEP_PIN, GPIO.LOW)
+        time.sleep(delay)
+        # Check if the limit switch is pressed
+        if GPIO.input(LIMIT_SWITCH_PIN) == GPIO.LOW:
+            break
+
+# Function to return to original position
+def return_to_origin(steps, delay=0.001):
+    GPIO.output(DIR_PIN, GPIO.LOW)  # Set direction to reverse
     for _ in range(steps):
         GPIO.output(STEP_PIN, GPIO.HIGH)
-        time.sleep(0.001)  # Control speed of the steps
+        time.sleep(delay)
         GPIO.output(STEP_PIN, GPIO.LOW)
-        time.sleep(0.001)
+        time.sleep(delay)
 
 try:
-    while True:
-        direction = input("Enter direction (CW for clockwise, CCW for counterclockwise): ").upper()
-        if direction not in ["CW", "CCW"]:
-            print("Invalid direction. Please enter 'CW' or 'CCW'.")
-            continue
-        steps = int(input("Enter the number of steps: "))
-        rotate_motor(steps, GPIO.HIGH if direction == "CW" else GPIO.LOW)
+    steps_forward = 0
+    # Move forward until limit switch is pressed
+    print("Moving forward until limit switch is pressed.")
+    rotate_motor(GPIO.HIGH)
+    
+    # Once limit switch is pressed, return to the original position
+    print("Limit switch activated. Returning to original position.")
+    return_to_origin(steps_forward)
 
 except KeyboardInterrupt:
     print("Program terminated by the user")
