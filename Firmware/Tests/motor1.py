@@ -1,44 +1,42 @@
-import RPi.GPIO as GPIO
 from time import sleep
+import pigpio
 
-# Stepper motor pins
-DIR = 20   # Direction GPIO Pin
-STEP = 21  # Step GPIO Pin
-CW = 1     # Clockwise Rotation
-CCW = 0    # Counterclockwise Rotation
+DIR = 20     # Direction GPIO Pin
+STEP = 21    # Step GPIO Pin
+SWITCH = 16  # GPIO pin of switch
 
-# Limit switch pin
-SWITCH_PIN = 16
+# Connect to pigpiod daemon
+pi = pigpio.pi()
 
-# Setup GPIO
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(DIR, GPIO.OUT)
-GPIO.setup(STEP, GPIO.OUT)
-GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+# Set up pins as an output
+pi.set_mode(DIR, pigpio.OUTPUT)
+pi.set_mode(STEP, pigpio.OUTPUT)
 
-# Motor parameters
-delay = .0208
+# Set up input switch
+pi.set_mode(SWITCH, pigpio.INPUT)
+pi.set_pull_up_down(SWITCH, pigpio.PUD_UP)
 
-def motor_step(direction, steps, delay):
-    """
-    Function to move the motor a given number of steps in a specified direction
-    """
-    GPIO.output(DIR, direction)
-    for _ in range(steps):
-        GPIO.output(STEP, GPIO.HIGH)
-        sleep(delay)
-        GPIO.output(STEP, GPIO.LOW)
-        sleep(delay)
+MODE = (14, 15, 18)   # Microstep Resolution GPIO Pins
+RESOLUTION = {'Full': (0, 0, 0),
+              'Half': (1, 0, 0),
+              '1/4': (0, 1, 0),
+              '1/8': (1, 1, 0),
+              '1/16': (0, 0, 1),
+              '1/32': (1, 0, 1)}
+for i in range(3):
+    pi.write(MODE[i], RESOLUTION['Full'][i])
+
+# Set duty cycle and frequency
+pi.set_PWM_dutycycle(STEP, 128)  # PWM 1/2 On 1/2 Off
+pi.set_PWM_frequency(STEP, 500)  # 500 pulses per second
 
 try:
-    # Move forward until the limit switch is pressed
-    while GPIO.input(SWITCH_PIN):  # While the switch is not pressed
-        motor_step(CW, 1, delay)  # Move one step at a time
-
-    # Once limit switch is pressed, wait a bit and return to original position
-    sleep(0.5)  # Short delay before moving back
-    motor_step(CCW, 200, delay)  # Move back 200 steps or adjust as needed
+    while True:
+        pi.write(DIR, pi.read(SWITCH))  # Set direction
+        sleep(.1)
 
 except KeyboardInterrupt:
-    # Clean up GPIO on exit
-    GPIO.cleanup()
+    print ("\nCtrl-C pressed.  Stopping PIGPIO and exiting...")
+finally:
+    pi.set_PWM_dutycycle(STEP, 0)  # PWM off
+    pi.stop()
