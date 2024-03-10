@@ -1,53 +1,30 @@
 import RPi.GPIO as GPIO
 import time
+from stepper_motor_controller import StepperMotorController  # Make sure this matches your file name
 
-# Use Broadcom SOC Pin numbers
+# Initialize the stepper motor controller
+step_pin = 20  # Example pin numbers, change according to your setup
+dir_pin = 21
+stepper = StepperMotorController(step_pin, dir_pin)
+
+# Set up GPIO pins for the limit switch
+limit_switch_pin = 23  # Change this to the GPIO pin you're using for the limit switch
 GPIO.setmode(GPIO.BCM)
-
-# Pins connected to the A4988 driver
-DIR_PIN = 20  # Direction GPIO Pin
-STEP_PIN = 21  # Step GPIO Pin
-# Limit switch pin
-LIMIT_SWITCH_PIN = 16  # GPIO Pin connected to the limit switch
-
-# Set pin states
-GPIO.setup(DIR_PIN, GPIO.OUT)
-GPIO.setup(STEP_PIN, GPIO.OUT)
-GPIO.setup(LIMIT_SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Enable internal pull-up resistor
-
-# Function to rotate the motor
-def rotate_motor(direction, delay=0.001):
-    GPIO.output(DIR_PIN, direction)
-    while True:
-        GPIO.output(STEP_PIN, GPIO.HIGH)
-        time.sleep(delay)
-        GPIO.output(STEP_PIN, GPIO.LOW)
-        time.sleep(delay)
-        # Check if the limit switch is pressed
-        if GPIO.input(LIMIT_SWITCH_PIN) == GPIO.LOW:
-            break
-
-# Function to return to original position
-def return_to_origin(steps, delay=0.001):
-    GPIO.output(DIR_PIN, GPIO.LOW)  # Set direction to reverse
-    for _ in range(steps):
-        GPIO.output(STEP_PIN, GPIO.HIGH)
-        time.sleep(delay)
-        GPIO.output(STEP_PIN, GPIO.LOW)
-        time.sleep(delay)
+GPIO.setup(limit_switch_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Assuming a normally open switch
 
 try:
-    steps_forward = 0
-    # Move forward until limit switch is pressed
-    print("Moving forward until limit switch is pressed.")
-    rotate_motor(GPIO.HIGH)
-    
-    # Once limit switch is pressed, return to the original position
-    print("Limit switch activated. Returning to original position.")
-    return_to_origin(steps_forward)
+    stepper.set_speed(0.01)  # Set a suitable speed for your motor
 
-except KeyboardInterrupt:
-    print("Program terminated by the user")
+    # Move forward until the limit switch is pressed (reads HIGH)
+    while GPIO.input(limit_switch_pin) == GPIO.LOW:
+        stepper.step(1, 1)  # Move one step forward
+        time.sleep(0.01)  # Adjust this delay to control step speed, if needed
+
+    total_steps = stepper.get_step_count()  # Get the number of steps taken
+
+    # Return to the original position
+    stepper.step(total_steps, -1)  # Move back the same number of steps
 
 finally:
-    GPIO.cleanup()  # Clean up GPIO to reset pin modes
+    stepper.cleanup()
+    GPIO.cleanup()
