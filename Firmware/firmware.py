@@ -71,9 +71,32 @@ pi.set_mode(ECHO_PIN, pigpio.INPUT)
 
 # main
 try:
+    # Move forward until in contact with wall
     while pi.read(SWITCH_PIN):
         pi.write(DIR_PIN, 1)
         sleep(.1)
+
+    # TODO: Stop while target detector starts up and then proceed to move to target
+
+    # Move back to target and use detector
+    target_detector.start_detection()
+    target_detector.detect_targets()
+
+    consec_zero_count = 0
+    req_consec_zeros = 5
+
+    while consec_zero_count < req_consec_zeros:
+        y_offset = target_detector.get_y_displacement()
+        if y_offset == 0:
+            consec_zero_count += 1
+            sleep(0.1) # Pause briefly to allow for subsequent displacment measurement
+        else:
+            consec_zero_count = 0
+            direction = -1 if y_offset > 0 else 1 
+
+    # TODO: Stop for PHASE_1_STOP_TIME once aligned
+    # TODO: move forward first target clearance distance
+    # TODO: Move forward 
 
 except KeyboardInterrupt:
     print("\nCtrl-C Pressed.  Stopping PIGPIO and exiting...")
