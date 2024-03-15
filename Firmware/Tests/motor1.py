@@ -82,7 +82,7 @@ def toggle_direction(gpio, level, tick):
         first_press = False
 
 # Set up a falling edge detection on the switch, calling toggle_direction
-pi.callback(SWITCH, pigpio.FALLING_EDGE, toggle_direction)
+pi.callback(SWITCH, pigpio.RISING_EDGE, toggle_direction)
 
 try:
     while True:
