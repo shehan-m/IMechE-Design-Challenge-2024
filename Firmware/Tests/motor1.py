@@ -75,8 +75,8 @@ first_press = True
 
 # Callback function to toggle direction only on down press (FALLING_EDGE)
 def toggle_direction(gpio, level, tick):
-    global direction
-    if level == 0 and first_press:  # Debounce
+    global direction, first_press
+    if level == 0 and first_press:
         direction = not direction
         pi.write(DIR, direction)
         first_press = False
