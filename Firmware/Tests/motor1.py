@@ -76,15 +76,14 @@ debounce_time = 0.1  # 100ms debounce time
 # Callback function to toggle direction only on down press (FALLING_EDGE)
 def toggle_direction(gpio, level, tick):
     global direction, last_press_time
-    if level == 0:  # Check if switch is pressed (FALLING_EDGE for normally open switch)
-        current_time = time()
-        if (current_time - last_press_time) >= debounce_time:  # Debounce
-            direction = not direction
-            pi.write(DIR, direction)
-            last_press_time = current_time
+    current_time = time()
+    if (current_time - last_press_time) >= debounce_time:  # Debounce
+        direction = not direction
+        pi.write(DIR, direction)
+        last_press_time = current_time
 
 # Set up a falling edge detection on the switch, calling toggle_direction
-pi.callback(SWITCH, pigpio.FALLING_EDGE, toggle_direction)
+pi.callback(SWITCH, pigpio.RISING_EDGE, toggle_direction)
 
 try:
     while True:
