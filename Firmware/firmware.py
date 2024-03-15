@@ -48,6 +48,26 @@ def generate_ramp(ramp):
 
     pi.wave_chain(chain)  # Transmit chain.
 
+def measure_distance():
+    # Send a 10us pulse to start the measurement
+    pi.gpio_trigger(TRIG_PIN, 10, 1)
+
+    # Wait for the echo start
+    start_time = time.time()
+    while pi.read(ECHO_PIN) == 0:
+        start_time = time.time()
+
+    # Wait for the echo end
+    end_time = time.time()
+    while pi.read(ECHO_PIN) == 1:
+        end_time = time.time()
+
+    # Calculate the distance
+    elapsed_time = end_time - start_time
+    distance = (elapsed_time * 34300) / 2  # Speed of sound is ~34300 cm/s at sea level
+
+    return distance
+
 # Initialise motor controller and target detector
 target_detector = TargetDetector(camera_index=0, desired_fps=30, desired_width=640, desired_height=480, debug_mode=False)
 
