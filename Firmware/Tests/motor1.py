@@ -78,12 +78,10 @@ first_actuation = True
 
 # Callback function to toggle direction only on the first down press (FALLING_EDGE)
 def toggle_direction(gpio, level, tick):
-    global direction, last_press_time, first_actuation
-    current_time = time()
-    if (current_time - last_press_time) >= debounce_time and first_actuation:  # Debounce and check if first actuation
+    global direction, first_actuation
+    if first_actuation:  # Check if first actuation
         direction = not direction
         pi.write(DIR, direction)
-        last_press_time = current_time
         first_actuation = False  # Prevent further direction changes
 
 # Set up a falling edge detection on the switch, calling toggle_direction
