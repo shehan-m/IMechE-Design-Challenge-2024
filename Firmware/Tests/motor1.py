@@ -1,4 +1,4 @@
-from time import sleep
+from time import sleep, time
 import pigpio
 
 DIR = 20     # Direction GPIO Pin
@@ -33,11 +33,17 @@ pi.set_PWM_frequency(STEP, 500)  # 500 pulses per second
 # Initialize direction
 direction = 1
 
+last_press_time = 0
+debounce_time = 0.1  # 100ms debounce time
+
 # Callback function to toggle direction
 def toggle_direction(gpio, level, tick):
-    global direction
-    direction = not direction
-    pi.write(DIR, direction)
+    global direction, last_press_time
+    current_time = time()
+    if (current_time - last_press_time) >= debounce_time:  # Debounce
+        direction = not direction
+        pi.write(DIR, direction)
+        last_press_time = current_time
 
 # Set up a falling edge detection on the switch, calling toggle_direction
 pi.callback(SWITCH, pigpio.FALLING_EDGE, toggle_direction)
@@ -47,7 +53,7 @@ try:
         sleep(0.1)  # Main loop does nothing; direction is changed in the callback
 
 except KeyboardInterrupt:
-    print ("\nCtrl-C pressed.  Stopping PIGPIO and exiting...")
+    print("\nCtrl-C pressed. Stopping PIGPIO and exiting...")
 finally:
     pi.set_PWM_dutycycle(STEP, 0)  # PWM off
     pi.stop()
