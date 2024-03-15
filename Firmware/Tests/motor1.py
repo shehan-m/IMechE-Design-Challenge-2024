@@ -71,19 +71,23 @@ pi.set_PWM_frequency(STEP, 500)  # 500 pulses per second
 direction = 1
 
 last_press_time = 0
-debounce_time = 1  # 100ms debounce time
+debounce_time = 0.1  # 100ms debounce time
 
-# Callback function to toggle direction only on down press (FALLING_EDGE)
+# Flag to indicate if the switch has been actuated once
+first_actuation = True
+
+# Callback function to toggle direction only on the first down press (FALLING_EDGE)
 def toggle_direction(gpio, level, tick):
-    global direction, last_press_time
+    global direction, last_press_time, first_actuation
     current_time = time()
-    if (current_time - last_press_time) >= debounce_time:  # Debounce
+    if (current_time - last_press_time) >= debounce_time and first_actuation:  # Debounce and check if first actuation
         direction = not direction
         pi.write(DIR, direction)
         last_press_time = current_time
+        first_actuation = False  # Prevent further direction changes
 
 # Set up a falling edge detection on the switch, calling toggle_direction
-pi.callback(SWITCH, pigpio.RISING_EDGE, toggle_direction)
+pi.callback(SWITCH, pigpio.FALLING_EDGE, toggle_direction)
 
 try:
     while True:
