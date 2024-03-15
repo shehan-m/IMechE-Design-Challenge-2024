@@ -1,4 +1,4 @@
-from time import sleep
+from time import sleep, time
 import pigpio
 
 def generate_ramp(ramp):
@@ -53,12 +53,12 @@ RESOLUTION = {'Full': (0, 0, 0),
               '1/32': (1, 0, 1)}
 
 # Ramp up
-generate_ramp([[320, 200],
-	       [500, 400],
-	       [800, 500],
-	       [1000, 700],
-	       [1600, 900],
-	       [2000, 10000]])
+#generate_ramp([[320, 200],
+#	       [500, 400],
+#	       [800, 500],
+#	       [1000, 700],
+#	       [1600, 900],
+#	       [2000, 10000]])
 
 for i in range(3):
     pi.write(MODE[i], RESOLUTION['Full'][i])
@@ -70,21 +70,26 @@ pi.set_PWM_frequency(STEP, 500)  # 500 pulses per second
 # Initialize direction
 direction = 1
 
-# Callback function to toggle direction
+# Limit switch actuation flag
+first_press = True
+
+# Callback function to toggle direction only on down press (FALLING_EDGE)
 def toggle_direction(gpio, level, tick):
-    global direction
-    direction = not direction
-    pi.write(DIR, direction)
+    global direction, first_press
+    if level == 0 and first_press:
+        direction = not direction
+        pi.write(DIR, direction)
+        first_press = False
 
 # Set up a falling edge detection on the switch, calling toggle_direction
-pi.callback(SWITCH, pigpio.FALLING_EDGE, toggle_direction)
+pi.callback(SWITCH, pigpio.RISING_EDGE, toggle_direction)
 
 try:
     while True:
         sleep(0.1)  # Main loop does nothing; direction is changed in the callback
 
 except KeyboardInterrupt:
-    print ("\nCtrl-C pressed.  Stopping PIGPIO and exiting...")
+    print("\nCtrl-C pressed. Stopping PIGPIO and exiting...")
 finally:
     pi.set_PWM_dutycycle(STEP, 0)  # PWM off
     pi.stop()
