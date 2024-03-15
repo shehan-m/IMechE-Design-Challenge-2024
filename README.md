@@ -44,3 +44,15 @@ sudo apt-get install python3-opencv
 ```shell
 sudo apt-get install fswebcam
 ```
+
+## Eng Sci
+
+### Current Limit stepper driver
+
+Vref = Imax * 8 * Rs
+
+where, Imax is the current limit of the stepper motor, Rs is the resistance of the current sensing resistor (R5 on driver board)
+
+In our case, Imax is 350 mA and Rs is 0.1 Ohms. Let's run the stepper motor at 60% of its rating. From this we get Vref:
+
+Vref = (0.350 * 0.6) * 8 * 0.1 = 0.17 V
