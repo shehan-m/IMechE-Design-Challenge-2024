@@ -71,7 +71,7 @@ pi.set_PWM_frequency(STEP, 500)  # 500 pulses per second
 direction = 1
 
 last_press_time = 0
-debounce_time = 0.1  # 100ms debounce time
+debounce_time = 1  # 100ms debounce time
 
 # Callback function to toggle direction only on down press (FALLING_EDGE)
 def toggle_direction(gpio, level, tick):
