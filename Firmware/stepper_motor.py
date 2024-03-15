@@ -1,95 +1,38 @@
-import time
-import logging
-import math
-import RPi.GPIO as GPIO
+from time import sleep
+import pigpio
 
-class StepperMotorController:
-    def __init__(self, step_pin, dir_pin, ms1_pin, ms2_pin, ms3_pin):
-        self.step_pin = step_pin
+class StepperController:
+    def __init__(self, dir_pin=20, step_pin=21):
         self.dir_pin = dir_pin
-        self.ms_pins = [ms1_pin, ms2_pin, ms3_pin]
-        self.current_speed = 0.01  # Default speed
-        self.target_speed = self.current_speed
-        self.acceleration = 0.0001  # Default acceleration
-        self.moving = False
-        self.step_count = 0  # Track the number of steps taken
+        self.step_pin = step_pin
+        self.direction = 1 # 1 forward, 0 backward
 
-        try:
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(self.step_pin, GPIO.OUT)
-            GPIO.setup(self.dir_pin, GPIO.OUT)
-            for pin in self.ms_pins:
-                GPIO.setup(pin, GPIO.OUT)
-            logging.info("Stepper motor controller initialized")
-        except Exception as e:
-            logging.error("Error initializing stepper motor controller: %s", e)
-            raise
+        # Connect to pigpiod daemon
+        pi = pigpio.pi()
 
-    def set_microstepping(self, resolution):
-        if resolution not in [1, 2, 4, 8, 16]:
-            raise ValueError("Invalid resolution. Must be one of [1, 2, 4, 8, 16]")
-        settings = {
-            1: (0, 0, 0),
-            2: (1, 0, 0),
-            4: (0, 1, 0),
-            8: (1, 1, 0),
-            16: (1, 1, 1)
-        }
-        for pin, value in zip(self.ms_pins, settings[resolution]):
-            GPIO.output(pin, value)
-
-    def set_speed(self, speed, acceleration=None):
-        if not (0 < speed <= 1):
-            raise ValueError("Speed must be between 0 and 1")
-        self.target_speed = speed
-        if acceleration is not None:
-            if not (0 < acceleration <= 0.01):
-                raise ValueError("Acceleration must be between 0 and 0.01")
-            self.acceleration = acceleration
-
-    def get_speed(self):
-        return self.current_speed
-
-    def accelerate(self):
-        if self.current_speed < self.target_speed:
-            self.current_speed = min(self.current_speed + self.acceleration, self.target_speed)
-        elif self.current_speed > self.target_speed:
-            self.current_speed = max(self.current_speed - self.acceleration, self.target_speed)
-
-    def step(self, steps, dir):
-        if not isinstance(steps, int) or steps <= 0:
-            raise ValueError("Steps must be a positive integer")
-        if dir not in [1, -1]:
-            raise ValueError("Direction must be 1 (forward) or -1 (backward)")
-
-        GPIO.output(self.dir_pin, GPIO.HIGH if dir > 0 else GPIO.LOW)
-        self.moving = True
-        try:
-            for _ in range(steps):
-                self.accelerate()
-                GPIO.output(self.step_pin, GPIO.HIGH)
-                time.sleep(abs(self.current_speed))
-                GPIO.output(self.step_pin, GPIO.LOW)
-                time.sleep(abs(self.current_speed))
-                self.step_count += dir  # Increment or decrement step count based on direction
-        finally:
-            self.moving = False
+        # Set up pins as an output
+        pi.set_mode(dir_pin, pigpio.OUTPUT)
+        pi.set_mode(step_pin, pigpio.OUTPUT)
     
-    def get_step_count(self):
-        return self.step_count
+    def set_pwm(self, duty_cycle, frequency):
+        self.pi.set_PWM_dutycycle(self.step_pin, duty_cycle)
+        self.pi.set_PWM_frequency(self.step_pin, frequency)
 
-    def is_moving(self):
-        return self.moving
+    def change_direction(self):
+        self.direction = not self.direction
+        self.pi.write(self.dir_pin, self.direction)
+
+    def run(self, duration=10):
+        start_time = sleep.time()
+        try:
+            while sleep.time() - start_time < duration:
+                self.pi.write(self.dir_pin, self.direction)
+                sleep(0.1)
+        except KeyboardInterrupt:
+            print("\nCtrl-C pressed. Stopping motor.")
+        finally:
+            self.stop()
 
     def stop(self):
-        GPIO.output(self.step_pin, GPIO.LOW)
-        self.moving = False
-
-    def cleanup(self):
-        GPIO.cleanup()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.cleanup()
+        self.pi.set_PWM_dutycycle(self.step_pin, 0)  # Turn PWM off
+        self.pi.stop()  # Disconnect from pigpiod
