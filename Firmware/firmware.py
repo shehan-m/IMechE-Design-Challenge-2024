@@ -117,7 +117,7 @@ try:
     # Move Forward clearance distance
     move_motor(1, ORIGIN_CLEARANCE)
 
-    # Step 1: Move forward until the target is detected
+    # Move forward until the target is detected
     target_detected = False
     while not target_detected:
         y_displacement = target_detector.get_y_displacement()
@@ -128,7 +128,7 @@ try:
             move_motor(1, 1)  # Move forward in search of the target
         time.sleep(0.01)
 
-    # Step 2: Alignment process
+    # Alignment process
     consec_zero_count = 0
     required_consec_zeros = 5
     while consec_zero_count < required_consec_zeros:
@@ -143,10 +143,6 @@ try:
             move_motor(direction, 1)
 
         time.sleep(0.01)
-
-    # TODO: move forward first target clearance distance
-    # TODO: Move forward until target is detected
-    # TODO: 
 
 except KeyboardInterrupt:
     print("\nCtrl-C Pressed.  Stopping PIGPIO and exiting...")
