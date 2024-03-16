@@ -87,7 +87,7 @@ def main_code():
                 move_motor(direction, 1)
                 print("Adjusting alignment.")
 
-            sleep(0.01)  # Short delay to allow for displacement updates
+            sleep(0.1)  # Short delay to allow for displacement updates
 
         # Wait for PHASE_1_STOP_TIME
         print("Alignment completed. Waiting for phase 1 stop time.")
@@ -108,7 +108,7 @@ def main_code():
                 print("Target detected. Starting alignment process.")
             else:
                 move_motor(1, 1)  # Move forward in search of the target
-            sleep(0.01)
+            sleep(0.1)
 
         # Alignment process
         consec_zero_count = 0
@@ -116,7 +116,7 @@ def main_code():
         while consec_zero_count < required_consec_zeros:
             y_displacement = target_detector.get_y_displacement()
 
-            if abs(y_displacement) <= 10:  # Alignment threshold
+            if abs(y_displacement) <= 1:  # Alignment threshold
                 consec_zero_count += 1
                 print(f"Alignment count: {consec_zero_count}/{required_consec_zeros}")
             else:
