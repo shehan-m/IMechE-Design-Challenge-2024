@@ -1,6 +1,6 @@
 import threading
 from time import sleep, time
-from target_detector import TargetDetector
+from target_detector_v2 import TargetDetector
 import pigpio
 
 # Constants for navigation (Distances are in steps)
@@ -73,6 +73,15 @@ def measure_distance():
 
 # Function to encapsulate main code
 def main_code():
+    '''
+    TODO: 
+    first using the ultrasonic sensor calculates the number of steps to move forward to the wall
+    moves this amount of step - clearance distance
+    once moved incremently moves forward until switch actuation
+    once actuated returns to origin + offset distance to start detector
+
+    '''
+
     print("Main code thread started.")
     try:
         steps = 0
@@ -133,7 +142,6 @@ except:
     print("Could not connect to pigpio daemon")
 
 # Set up stepper pins
-print("Setting up stepper pins.")
 pi.set_mode(DIR_PIN, pigpio.OUTPUT)
 pi.set_mode(STEP_PIN, pigpio.OUTPUT)
 
@@ -142,18 +150,16 @@ frequency = 500  # steps per second
 pi.set_PWM_frequency(STEP_PIN, frequency)
 
 # Set up input switch
-print("Setting up input switch.")
 pi.set_mode(SWITCH_PIN, pigpio.INPUT)
 pi.set_pull_up_down(SWITCH_PIN, pigpio.PUD_UP)
 
 # Set up ultrasonic sensor pins
-print("Setting up ultrasonic sensor pins.")
 pi.set_mode(TRIG_PIN, pigpio.OUTPUT)
 pi.set_mode(ECHO_PIN, pigpio.INPUT)
 
 # Start target detector
 print("Starting target detector.")
-target_detector.start_detection()
+detector_thread = threading.Thread(target=target_detector.detect_targets())
 
 # Start main code in a separate thread
 print("Starting main code.")
