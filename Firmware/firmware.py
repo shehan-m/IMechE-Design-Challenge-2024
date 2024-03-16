@@ -22,7 +22,7 @@ TRIG_PIN = 17
 ECHO_PIN = 18
 
 # Function to move motor
-def move_motor(direction, steps, speed):
+def move_motor(direction, steps, speed=500):
     pi.write(DIR_PIN, direction)
     for _ in range(steps):
         pi.write(STEP_PIN, 1)
@@ -108,7 +108,7 @@ def main_code():
                 print("Target detected. Starting alignment process.")
             else:
                 move_motor(1, 1)  # Move forward in search of the target
-            time.sleep(0.01)
+            sleep(0.01)
 
         # Alignment process
         consec_zero_count = 0
@@ -124,7 +124,7 @@ def main_code():
                 direction = 1 if y_displacement > 0 else 0
                 move_motor(direction, 1)
 
-            time.sleep(0.01)
+            sleep(0.01)
 
     except KeyboardInterrupt:
         print("\nCtrl-C Pressed.  Stopping PIGPIO and exiting...")
