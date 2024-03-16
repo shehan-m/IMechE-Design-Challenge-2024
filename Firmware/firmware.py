@@ -1,4 +1,4 @@
-from time import sleep
+from time import sleep, time
 from target_detector import TargetDetector
 import pigpio
 
@@ -20,47 +20,28 @@ SWITCH_PIN = 16 # NO Terminal
 TRIG_PIN = 17
 ECHO_PIN = 18
 
-def generate_ramp(ramp):
-    """Generate ramp wave forms.
-    ramp:  List of [Frequency, Steps]
-    """
-    pi.wave_clear()     # clear existing waves
-    length = len(ramp)  # number of ramp levels
-    wid = [-1] * length
-
-    # Generate a wave per ramp level
-    for i in range(length):
-        frequency = ramp[i][0]
-        micros = int(500000 / frequency)
-        wf = []
-        wf.append(pigpio.pulse(1 << STEP, 0, micros))  # pulse on
-        wf.append(pigpio.pulse(0, 1 << STEP, micros))  # pulse off
-        pi.wave_add_generic(wf)
-        wid[i] = pi.wave_create()
-
-    # Generate a chain of waves
-    chain = []
-    for i in range(length):
-        steps = ramp[i][1]
-        x = steps & 255
-        y = steps >> 8
-        chain += [255, 0, wid[i], 255, 1, x, y]
-
-    pi.wave_chain(chain)  # Transmit chain.
+# Function to move motor
+def move_motor(direction, steps):
+    pi.write(DIR_PIN, direction)
+    for _ in range(steps):
+        pi.write(STEP_PIN, 1)
+        sleep(1 / (2 * frequency))
+        pi.write(STEP_PIN, 0)
+        sleep(1 / (2 * frequency))
 
 def measure_distance():
     # Send a 10us pulse to start the measurement
     pi.gpio_trigger(TRIG_PIN, 10, 1)
 
     # Wait for the echo start
-    start_time = time.time()
+    start_time = time()
     while pi.read(ECHO_PIN) == 0:
-        start_time = time.time()
+        start_time = time()
 
     # Wait for the echo end
-    end_time = time.time()
+    end_time = time()
     while pi.read(ECHO_PIN) == 1:
-        end_time = time.time()
+        end_time = time()
 
     # Calculate the distance
     elapsed_time = end_time - start_time
@@ -81,6 +62,10 @@ except:
 pi.set_mode(DIR_PIN, pigpio.OUTPUT)
 pi.set_mode(STEP_PIN, pigpio.OUTPUT)
 
+# Frequency and speed settings
+frequency = 500  # steps per second
+pi.set_PWM_frequency(STEP_PIN, frequency)
+
 # Set up input switch
 pi.set_mode(SWITCH_PIN, pigpio.INPUT)
 pi.set_pull_down(SWITCH_PIN, pigpio.PUD_UP)
@@ -91,10 +76,16 @@ pi.set_mode(ECHO_PIN, pigpio.INPUT)
 
 # main
 try:
-    # Move forward until in contact with wall
-    while pi.read(SWITCH_PIN):
-        pi.write(DIR_PIN, 1)
-        sleep(.1)
+   steps = 0
+   # Move forward until switch is pressed
+   while pi.read(SWITCH_PIN) == 1:  # Assuming switch is normally high and goes low when pressed
+    move_motor(1, 1)  # Move one step forward
+    steps += 1
+    sleep(0.01)  # Short delay to debounce and slow down the step rate if necessary
+
+    # Once switch is pressed, reverse direction
+    sleep(0.5)  # Short delay to ensure switch is fully pressed
+    move_motor(0, steps)  # Move back the same number of steps
 
     # TODO: Stop while target detector starts up and then proceed to move to target
 
@@ -116,7 +107,8 @@ try:
 
     # TODO: Stop for PHASE_1_STOP_TIME once aligned
     # TODO: move forward first target clearance distance
-    # TODO: Move forward 
+    # TODO: Move forward until target is detected
+    # TODO: 
 
 except KeyboardInterrupt:
     print("\nCtrl-C Pressed.  Stopping PIGPIO and exiting...")
