@@ -44,9 +44,9 @@ try:
     steps = 0
     # Move forward until switch is pressed
     while pi.read(SWITCH) == 1:  # Assuming switch is normally high and goes low when pressed
-        move_motor(1, 1)  # Move one step forward
-        steps += 1
-        sleep(0.01)  # Short delay to debounce and slow down the step rate if necessary
+        move_motor(1, 10)  # Move one step forward
+        steps += 10
+        sleep(0.0001)  # Short delay to debounce and slow down the step rate if necessary
 
     # Once switch is pressed, reverse direction
     sleep(0.5)  # Short delay to ensure switch is fully pressed

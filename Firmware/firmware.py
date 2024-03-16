@@ -50,7 +50,7 @@ def measure_distance():
     return distance
 
 # Initialise motor controller and target detector
-target_detector = TargetDetector(camera_index=0, desired_fps=30, desired_width=640, desired_height=480, debug_mode=False)
+target_detector = TargetDetector(camera_index=1, desired_fps=30, desired_width=640, desired_height=480, debug_mode=False)
 
 # Connect to pigiod daemon
 try:
@@ -68,7 +68,7 @@ pi.set_PWM_frequency(STEP_PIN, frequency)
 
 # Set up input switch
 pi.set_mode(SWITCH_PIN, pigpio.INPUT)
-pi.set_pull_down(SWITCH_PIN, pigpio.PUD_UP)
+pi.set_pull_up_down(SWITCH_PIN, pigpio.PUD_UP)
 
 # Set up ultrasonic sensor pins
 pi.set_mode(TRIG_PIN, pigpio.OUTPUT)
