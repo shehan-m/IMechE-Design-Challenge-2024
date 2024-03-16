@@ -155,7 +155,7 @@ pi.set_PWM_frequency(STEP_PIN, frequency)
 # Set up input switch
 print("Setting up input switch.")
 pi.set_mode(SWITCH_PIN, pigpio.INPUT)
-pi.set_pull_down(SWITCH_PIN, pigpio.PUD_UP)
+pi.set_pull_up_down(SWITCH_PIN, pigpio.PUD_UP)
 
 # Set up ultrasonic sensor pins
 print("Setting up ultrasonic sensor pins.")
