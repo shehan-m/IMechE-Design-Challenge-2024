@@ -65,22 +65,3 @@ class TargetDetector:
         if self.debug_mode and frame is not None:
             cv2.imshow(window_name, frame)
             cv2.waitKey(1)
-
-
-def main():
-    print("Starting target detection. Press Ctrl+C to stop.")
-    detector = TargetDetector(debug_mode=True)  # Enable debug mode to see the detection window
-    
-    try:
-        while True:
-            detector.detect_targets()
-            y_displacement = detector.get_y_displacement()
-            print(f"Current Y displacement: {y_displacement}")
-    except KeyboardInterrupt:
-        print("Stopping detection...")
-    finally:
-        detector.release()
-        cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
