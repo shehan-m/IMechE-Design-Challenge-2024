@@ -1,4 +1,4 @@
-from target_detector import TargetDetector
+from Firmware.old.target_detector import TargetDetector
 import time
 
 def run_alignment(detector):
