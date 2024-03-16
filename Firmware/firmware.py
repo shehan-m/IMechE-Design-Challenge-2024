@@ -21,7 +21,7 @@ TRIG_PIN = 17
 ECHO_PIN = 18
 
 # Function to move motor
-def move_motor(direction, steps):
+def move_motor(direction, steps, speed):
     pi.write(DIR_PIN, direction)
     for _ in range(steps):
         pi.write(STEP_PIN, 1)
@@ -74,6 +74,10 @@ pi.set_pull_down(SWITCH_PIN, pigpio.PUD_UP)
 pi.set_mode(TRIG_PIN, pigpio.OUTPUT)
 pi.set_mode(ECHO_PIN, pigpio.INPUT)
 
+# Start target detector
+target_detector.start_detection()
+target_detector.detect_targets()
+
 # main
 try:
    steps = 0
@@ -87,25 +91,59 @@ try:
     sleep(0.5)  # Short delay to ensure switch is fully pressed
     move_motor(0, steps)  # Move back the same number of steps
 
-    # TODO: Stop while target detector starts up and then proceed to move to target
+    consec_zero_count = 0  # Counter for consecutive zero-displacements
+    required_consec_zeros = 5  # Required number of consecutive zero-displacements for alignment
+    
+    while consec_zero_count < required_consec_zeros:
+        y_displacement = target_detector.get_y_displacement()
+        print(f"Current Y displacement: {y_displacement}")
 
-    # Move back to target and use detector
-    target_detector.start_detection()
-    target_detector.detect_targets()
-
-    consec_zero_count = 0
-    req_consec_zeros = 5
-
-    while consec_zero_count < req_consec_zeros:
-        y_offset = target_detector.get_y_displacement()
-        if y_offset == 0:
+        if abs(y_displacement) <= 1 :  # Adjust threshold as needed
             consec_zero_count += 1
-            sleep(0.1) # Pause briefly to allow for subsequent displacment measurement
+            print(f"Alignment count: {consec_zero_count}/{required_consec_zeros}")
         else:
-            consec_zero_count = 0
-            direction = -1 if y_offset > 0 else 1 
+            consec_zero_count = 0  # Reset counter if displacement is outside the threshold
 
-    # TODO: Stop for PHASE_1_STOP_TIME once aligned
+            # Determine direction based on displacement
+            direction = 1 if y_displacement > 0 else 0
+            # Move motor in small steps for finer control
+            move_motor(direction, 1)
+
+        sleep(0.01)  # Short delay to allow for displacement updates
+
+    # Wait for PHASE_1_STOP_TIME
+    sleep(PHASE_1_STOP_TIME)
+
+    # Move Forward clearance distance
+    move_motor(1, ORIGIN_CLEARANCE)
+
+    # Step 1: Move forward until the target is detected
+    target_detected = False
+    while not target_detected:
+        y_displacement = target_detector.get_y_displacement()
+        if abs(y_displacement) < 200:  # Adjust condition based on how target detection is defined
+            target_detected = True
+            print("Target detected. Starting alignment process.")
+        else:
+            move_motor(1, 1)  # Move forward in search of the target
+        time.sleep(0.01)
+
+    # Step 2: Alignment process
+    consec_zero_count = 0
+    required_consec_zeros = 5
+    while consec_zero_count < required_consec_zeros:
+        y_displacement = target_detector.get_y_displacement()
+        
+        if abs(y_displacement) <= 10:  # Alignment threshold
+            consec_zero_count += 1
+            print(f"Alignment count: {consec_zero_count}/{required_consec_zeros}")
+        else:
+            consec_zero_count = 0  # Reset counter if displacement is significant
+            direction = 1 if y_displacement > 0 else 0
+            move_motor(direction, 1)
+
+        time.sleep(0.01)
+
     # TODO: move forward first target clearance distance
     # TODO: Move forward until target is detected
     # TODO: 
