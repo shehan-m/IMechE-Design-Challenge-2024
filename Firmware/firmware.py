@@ -6,7 +6,7 @@ import pigpio
 SAFE_DISTANCE = 200 # Safe distance to start deceleration to low speed
 DATUM_OFFSET = 100 # Offset of datum from camera centre
 
-ORIGIN_CLEARANCE = 300 # distance to clear first target from vision
+ORIGIN_CLEARANCE = 1000 # distance to clear first target from vision
 
 # Specification constants
 PHASE_1_STOP_TIME = 7.5
