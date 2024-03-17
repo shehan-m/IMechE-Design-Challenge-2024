@@ -66,9 +66,9 @@ class TargetDetector:
     
     def get_inter_target_detection_time(self):
         if self.inter_target_detected:
-            return True, self.inter_detection_time
+            return self.inter_detection_time
         else:
-            return False, None
+            return None
 
     def release(self):
         self.cap.release()
