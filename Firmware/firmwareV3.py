@@ -33,7 +33,7 @@ def move_motor(direction, steps, speed=500):
         sleep(1 / (2 * frequency))
 
 # Function to move the motor a certain number of steps using PWM
-def move_motor_pwm(steps, direction, speed=500):
+def move_motor_pwm(direction, steps, speed=500):
     pi.write(DIR_PIN, direction)  # Set direction
 
     # Calculate the duration the PWM signal should be active to achieve the desired number of steps
@@ -47,7 +47,7 @@ def move_motor_pwm(steps, direction, speed=500):
     pi.set_PWM_dutycycle(STEP_PIN, 128)  # 50% duty cycle
     
     # Wait for the duration calculated
-    time.sleep(duration)
+    sleep(duration)
     
     # Disable PWM to stop the motor
     pi.set_PWM_dutycycle(STEP_PIN, 0)
@@ -121,12 +121,12 @@ def main_code():
 
     try:
         # Move to wall
-        move_motor(1, steps_to_wall)
+        move_motor_pwm(1, steps_to_wall)
         steps += steps_to_wall
 
         # Move forward until switch is pressed
         pi.set_PWM_dutycycle(STEP_PIN, 128)
-        pi.set_PWM_frequency(STEP_PIN, 100)
+        pi.set_PWM_frequency(STEP_PIN, 250)
 
         # Monitor the switch state and stop the motor when the switch is pressed
         while pi.read(SWITCH_PIN):  # Loop until the switch is pressed
@@ -139,7 +139,7 @@ def main_code():
 
         # Once switch is pressed, reverse direction
         sleep(0.5)  # Short delay to ensure switch is fully pressed
-        move_motor(0, steps)  # Move back the same number of steps
+        move_motor_pwm(0, steps)  # Move back the same number of steps
         steps = 0
         print("Reversed direction.")
         
@@ -152,7 +152,7 @@ def main_code():
 
         # Move Forward clearance distance
         print("Moving forward clearance distance.")
-        move_motor(1, ORIGIN_CLEARANCE)
+        move_motor_pwm(1, ORIGIN_CLEARANCE)
 
         # Calculate location of second target
         time_to_target = target_detector.get_inter_target_detection_time() - start_time
