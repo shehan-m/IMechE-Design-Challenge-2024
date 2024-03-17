@@ -72,7 +72,7 @@ def align(req_consec_zero_count):
                 # Move motor in small steps for finer control
                 move_motor(direction, y_offset * Y_OFFSET_TO_STEPS)
                 print("Adjusting alignment...")
-                sleep(y_offset * frequency) # Wait for movement
+                # sleep(abs(y_offset) * frequency) # Wait for movement
 
             sleep(0.1)  # Short delay to allow for displacement updates
 
@@ -116,8 +116,8 @@ def main_code():
     distance_to_wall = measure_distance()
     steps_to_wall = distance_to_wall * MM_TO_STEPS
 
-    print(distance_to_wall + " mm to wall")
-    print(steps_to_wall + " steps to wall")
+    print(str(distance_to_wall) + " mm to wall")
+    print(str(steps_to_wall) + " steps to wall")
 
     try:
 
@@ -130,7 +130,7 @@ def main_code():
 
         # Move forward until switch is pressed
         pi.set_PWM_dutycycle(STEP_PIN, 128)
-        pi.set_PWM_frequency(STEP_PIN, 200)
+        pi.set_PWM_frequency(STEP_PIN, 100)
 
         # Monitor the switch state and stop the motor when the switch is pressed
         while pi.read(SWITCH_PIN):  # Loop until the switch is pressed
@@ -160,7 +160,7 @@ def main_code():
 
         # Calculate location of second target
         time_to_target = target_detector.get_inter_target_detection_time() - start_time
-        print(time_to_target "seconds to target")
+        print(str(time_to_target) + "seconds to target")
         steps_to_second_target = (1 / (2 * frequency)) * time_to_target
 
         # Move forward until the target is detected
