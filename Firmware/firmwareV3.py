@@ -205,7 +205,7 @@ pi.set_mode(ECHO_PIN, pigpio.INPUT)
 
 # Start target detector
 print("Starting target detector.")
-detector_thread = threading.Thread(target=target_detector.detect_targets())
+detector_thread = threading.Thread(target=target_detector.detect_targets)
 detector_thread.start()
 
 # Start main code in a separate thread

@@ -28,38 +28,41 @@ class TargetDetector:
         return None
 
     def detect_targets(self):
-        ret, frame = self.cap.read()
-        if not ret:
-            logging.error("Failed to read frame")
-            return
+        while True:
+            ret, frame = self.cap.read()
+            if not ret:
+                logging.error("Failed to read frame")
+                return
 
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        largest_y_displacement = None  # To hold the y displacement of the largest detected target
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            largest_y_displacement = None  # To hold the y displacement of the largest detected target
 
-        for color_range in self.color_ranges:
-            mask = cv2.inRange(hsv, np.array(color_range[0]), np.array(color_range[1]))
-            contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            for color_range in self.color_ranges:
+                mask = cv2.inRange(hsv, np.array(color_range[0]), np.array(color_range[1]))
+                contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-            if contours:
-                largest_contour = max(contours, key=cv2.contourArea)
-                center = self.centroid(largest_contour)
-                if center:
-                    self.inter_target_detected = True
-                    self.inter_detection_time = time.time()
+                if contours:
+                    largest_contour = max(contours, key=cv2.contourArea)
+                    center = self.centroid(largest_contour)
+                    if center:
+                        self.inter_target_detected = True
+                        self.inter_detection_time = time.time()
 
-                    y_displacement = center[1] - (frame.shape[0] // 2)
-                    largest_y_displacement = y_displacement  # Update with the latest y displacement
-                    if self.debug_mode:
-                        # Draw the contour and centroid for debugging
-                        cv2.drawContours(frame, [largest_contour], -1, (0, 255, 0), 2)
-                        cv2.circle(frame, center, 5, (255, 0, 0), -1)
+                        y_displacement = center[1] - (frame.shape[0] // 2)
+                        largest_y_displacement = y_displacement  # Update with the latest y displacement
+                        if self.debug_mode:
+                            # Draw the contour and centroid for debugging
+                            cv2.drawContours(frame, [largest_contour], -1, (0, 255, 0), 2)
+                            cv2.circle(frame, center, 5, (255, 0, 0), -1)
 
-        if largest_y_displacement is not None:
-            self.y_displacement = largest_y_displacement
+            if largest_y_displacement is not None:
+                self.y_displacement = largest_y_displacement
 
-        if self.debug_mode:
-            cv2.imshow("Debug Stream", frame)
-            cv2.waitKey(1)
+            if self.debug_mode:
+                cv2.imshow("Debug Stream", frame)
+                cv2.waitKey(1)
+            
+            time.sleep(0.1)
 
     def get_y_displacement(self):
         return self.y_displacement
