@@ -156,6 +156,7 @@ def main_code():
 
         # Calculate location of second target
         time_to_target = target_detector.get_inter_target_detection_time() - start_time
+        print(time_to_target "seconds to target")
         steps_to_second_target = (1 / (2 * frequency)) * time_to_target
 
         # Move forward until the target is detected
