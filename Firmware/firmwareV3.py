@@ -120,10 +120,6 @@ def main_code():
     print(str(steps_to_wall) + " steps to wall")
 
     try:
-
-        while True:
-            print(target_detector.get_y_displacement())
-
         # Move to wall
         move_motor(1, steps_to_wall)
         steps += steps_to_wall
