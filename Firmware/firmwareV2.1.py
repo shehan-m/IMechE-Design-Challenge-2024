@@ -74,7 +74,7 @@ def measure_distance():
     elapsed_time = end_time - start_time
     distance = (elapsed_time * 343000) / 2  # Speed of sound is ~343000 mm/s at sea level
 
-    return distance
+    return round(distance)
 
 # Function to encapsulate main code
 def main_code():
@@ -143,7 +143,7 @@ def main_code():
 
 # Initialise target detector
 print("Initializing target detector.")
-target_detector = TargetDetector(camera_index=0, desired_fps=30, desired_width=640, desired_height=480, debug_mode=False)
+target_detector = TargetDetector(camera_index=0, desired_width=640, desired_height=480, debug_mode=False)
 
 # Connect to pigiod daemon
 print("Connecting to pigpio daemon.")
