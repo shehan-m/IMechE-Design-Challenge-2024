@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import logging
+import time
 
 class TargetDetector:
     def __init__(self, camera_index=0, desired_width=320, desired_height=240, debug_mode=False):
@@ -8,6 +9,8 @@ class TargetDetector:
         self.color_ranges = [((100, 100, 100), (120, 255, 255))]  # Example blue color range
         self.debug_mode = debug_mode
         self.y_displacement = 0  # Store y displacement of the most recently detected target
+        self.inter_target_detected = False # Flag to indicate target detection
+        self.inter_detection_time = None # Time of first target detection
 
     def initialize_camera(self, camera_index, width, height):
         cap = cv2.VideoCapture(camera_index)
@@ -41,6 +44,9 @@ class TargetDetector:
                 largest_contour = max(contours, key=cv2.contourArea)
                 center = self.centroid(largest_contour)
                 if center:
+                    self.inter_target_detected = True
+                    self.inter_detection_time = time.time()
+
                     y_displacement = center[1] - (frame.shape[0] // 2)
                     largest_y_displacement = y_displacement  # Update with the latest y displacement
                     if self.debug_mode:
@@ -57,6 +63,12 @@ class TargetDetector:
 
     def get_y_displacement(self):
         return self.y_displacement
+    
+    def get_inter_target_detection_time(self):
+        if self.inter_target_detected:
+            return True, self.inter_detection_time
+        else:
+            return False, None
 
     def release(self):
         self.cap.release()
