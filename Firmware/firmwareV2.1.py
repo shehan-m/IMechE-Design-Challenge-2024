@@ -89,7 +89,10 @@ def main_code():
 
     print("Main code thread started.")
 
+    global frequency
+
     steps = 0
+    start_time = time()
     steps_to_wall = measure_distance() * MM_TO_STEPS
 
     try:
@@ -116,23 +119,18 @@ def main_code():
         # Wait for PHASE_1_STOP_TIME
         print("Alignment completed. Waiting for phase 1 stop time.")
         sleep(PHASE_1_STOP_TIME)
-        print("Phase 1 stop time elapsed.")
 
         # Move Forward clearance distance
         print("Moving forward clearance distance.")
         move_motor(1, ORIGIN_CLEARANCE)
 
+        # Calculate location of second target
+        time_to_target = target_detector.get_inter_target_detection_time() - start_time
+        steps_to_second_target = (1 / (2 * frequency)) * time_to_target
+
         # Move forward until the target is detected
         print("Moving forward to detect target.")
-        target_detected = False
-        while not target_detected:
-            y_displacement = target_detector.get_y_displacement()
-            if abs(y_displacement) < 200:  # Adjust condition based on how target detection is defined
-                target_detected = True
-                print("Target detected. Starting alignment process.")
-            else:
-                move_motor(1, 1)  # Move forward in search of the target
-            sleep(0.1)
+        move_motor(1, steps_to_second_target)
 
         # Alignment process
         align(REQ_CONSEC)
