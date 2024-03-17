@@ -4,6 +4,8 @@ from target_detector_v2 import TargetDetector
 import pigpio
 
 # Constants for navigation (Distances are in steps)
+MM_TO_STEPS = 10 # 1 mm is 10 steps
+Y_OFFSET_TO_STEPS = 10 # 1 y-offset is 10 steps
 SAFE_DISTANCE = 200 # Safe distance to start deceleration to low speed
 DATUM_OFFSET = 100 # Offset of datum from camera centre
 ORIGIN_CLEARANCE = 1000 # distance to clear first target from vision
@@ -30,24 +32,27 @@ def move_motor(direction, steps, speed=500):
         pi.write(STEP_PIN, 0)
         sleep(1 / (2 * frequency))
 
-def align(req_consec_zeros):
+def align(req_consec_zero_count):
+    global frequency
     consec_zero_count = 0  # Counter for consecutive zero-displacements
 
-    while consec_zero_count < req_consec_zeros:
-            y_displacement = target_detector.get_y_displacement()
-            print(f"Current Y displacement: {y_displacement}")
+    while consec_zero_count < req_consec_zero_count:
+            y_offset = target_detector.get_y_displacement()
+            print(f"Current Y offset: {y_offset}")
 
-            if abs(y_displacement) <= 1 :  # Adjust threshold as needed
+            if abs(y_offset) <= 1 :
                 consec_zero_count += 1
-                print(f"Alignment count: {consec_zero_count}/{req_consec_zeros}")
+                print(f"Alignment count: {consec_zero_count}/{req_consec_zero_count}")
             else:
                 consec_zero_count = 0  # Reset counter if displacement is outside the threshold
 
                 # Determine direction based on displacement
-                direction = 1 if y_displacement > 0 else 0
+                direction = 1 if y_offset > 0 else 0
+
                 # Move motor in small steps for finer control
-                move_motor(direction, 1)
-                print("Adjusting alignment.")
+                move_motor(direction, y_offset * Y_OFFSET_TO_STEPS)
+                print("Adjusting alignment...")
+                sleep(y_offset * frequency) # Wait for movement
 
             sleep(0.1)  # Short delay to allow for displacement updates
 
@@ -67,7 +72,7 @@ def measure_distance():
 
     # Calculate the distance
     elapsed_time = end_time - start_time
-    distance = (elapsed_time * 34300) / 2  # Speed of sound is ~34300 cm/s at sea level
+    distance = (elapsed_time * 343000) / 2  # Speed of sound is ~343000 mm/s at sea level
 
     return distance
 
@@ -83,8 +88,15 @@ def main_code():
     '''
 
     print("Main code thread started.")
+
+    steps = 0
+    steps_to_wall = measure_distance() * MM_TO_STEPS
+
     try:
-        steps = 0
+        # Move to wall
+        move_motor(1, steps_to_wall)
+        steps += steps_to_wall
+
         # Move forward until switch is pressed
         while pi.read(SWITCH_PIN) == 1:  # Assuming switch is normally high and goes low when pressed
             move_motor(1, 1)  # Move one step forward
@@ -95,6 +107,7 @@ def main_code():
         # Once switch is pressed, reverse direction
         sleep(0.5)  # Short delay to ensure switch is fully pressed
         move_motor(0, steps)  # Move back the same number of steps
+        steps = 0
         print("Reversed direction.")
         
         # Alignment process
@@ -130,8 +143,8 @@ def main_code():
         pi.set_PWM_dutycycle(STEP_PIN, 0) # PWM off
         pi.stop()
 
-# Initialise motor controller and target detector
-print("Initializing motor controller and target detector.")
+# Initialise target detector
+print("Initializing target detector.")
 target_detector = TargetDetector(camera_index=0, desired_fps=30, desired_width=640, desired_height=480, debug_mode=False)
 
 # Connect to pigiod daemon
@@ -160,6 +173,7 @@ pi.set_mode(ECHO_PIN, pigpio.INPUT)
 # Start target detector
 print("Starting target detector.")
 detector_thread = threading.Thread(target=target_detector.detect_targets())
+detector_thread.start()
 
 # Start main code in a separate thread
 print("Starting main code.")
@@ -168,4 +182,4 @@ main_thread.start()
 
 # Wait for both threads to finish
 main_thread.join()
-target_detector.stop_detection()  # Stop target detection after main code finishes
+detector_thread.join()
