@@ -1,38 +1,33 @@
-from target_detector import TargetDetector
-import threading
+from target_detector_v2 import TargetDetector
 import time
+import threading
 
-def run_alignment(detector):
-    detector.align_target()
+# Initialize the TargetDetector
+print("Initializing target detector.")
+target_detector = TargetDetector(camera_index=0, desired_width=640, desired_height=480, debug_mode=True)
 
-detector = TargetDetector()
+# Define a function to run target detection in a background thread
+def run_detection():
+    target_detector.detect_targets()
 
-max_consecutive_zeros = 5
-consecutive_zeros = 0
-
-not_detected = True
-
-detection_thread = threading.Thread(target=detector.align_target)
+# Start the detection process in a separate thread
+detection_thread = threading.Thread(target=run_detection)
 detection_thread.start()
 
+try:
+    while True:
+        # Main thread continues running and can periodically check the y displacement
+        y_offset = target_detector.get_y_displacement()
+        print(f"Current Y Displacement: {y_offset}")
+        time.sleep(1)  # Adjust the sleep time as needed
 
-
-# Use target alignment
-# Main thread continuously checks y_displacement
-while not_detected:
-    y_displacement = detector.get_y_displacement()
-    print("Y Displacement:", y_displacement)
-
-    # Add any other processing or conditions as needed
-    time.sleep(0.5)
-
-    # Stop detection if needed (e.g., after x consecutive zeros)
-    if y_displacement == 0:
-        consecutive_zeros += 1
-        if consecutive_zeros >= max_consecutive_zeros:
-            detector.stop_detection()
-            not_detected = False
-            detection_thread.join()  # Wait for the thread to finish gracefully
-            break
-    else:
-        consecutive_zeros = 0
+except KeyboardInterrupt:
+    print("Stopping detection and exiting...")
+finally:
+    # Stop the background detection thread and release resources
+    if detection_thread.is_alive():
+        # Here, you'd need a way to gracefully terminate detect_targets or just wait for it to complete
+        # This may require adding some mechanism in your class to stop the loop in detect_targets, as threading.Thread does not have a direct stop method.
+        pass  # Implement stopping mechanism
+    
+    target_detector.release()
