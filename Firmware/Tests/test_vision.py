@@ -1,10 +1,10 @@
-from target_detector import TargetDetector
+from Firmware.old.target_detector import TargetDetector
 import time
 
 def run_alignment(detector):
     detector.detect_targets()
 
-detector = TargetDetector(0, 15, 320, 240, True)
+detector = TargetDetector(0, 30, 640, 480, True)
 
 max_consecutive_zeros = 5
 consecutive_zeros = 0

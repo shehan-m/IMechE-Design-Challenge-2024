@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-from stepper_motor import StepperMotorController
+from Firmware.old.stepper_motorV2 import StepperMotorController
 import time
 
 # Constants
