@@ -1,6 +1,6 @@
 import threading
 from time import sleep, time
-from target_detector_v2 import TargetDetector
+from Firmware.target_detector import TargetDetector
 import pigpio
 
 # Constants for navigation

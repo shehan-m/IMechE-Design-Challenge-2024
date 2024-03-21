@@ -1,4 +1,4 @@
-from target_detector_v2 import TargetDetector
+from Firmware.target_detector import TargetDetector
 import time
 import threading
 

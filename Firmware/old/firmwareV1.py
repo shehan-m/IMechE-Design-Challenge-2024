@@ -1,6 +1,6 @@
 import RPi.GPIO as GPIO
 from Firmware.old.stepper_motor import StepperMotorController
-from Firmware.old.target_detector import TargetDetector
+from Firmware.old.target_detector_V1 import TargetDetector
 import time
 
 # Constants for navigation (Distances are in mm)
