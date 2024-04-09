@@ -6,7 +6,8 @@ import time
 class TargetDetector:
     def __init__(self, camera_index=0, desired_width=320, desired_height=240, debug_mode=False):
         self.cap = self.initialize_camera(camera_index, desired_width, desired_height)
-        self.color_ranges = [((100, 100, 100), (120, 255, 255))]  # Example blue color range
+        self.color_ranges = [  # Lower red range
+                     (160, 100, 100), (180, 255, 255)]  # Upper red range
         self.debug_mode = debug_mode
         self.y_displacement = 0  # Store y displacement of the most recently detected target
         self.inter_target_detected = False # Flag to indicate target detection

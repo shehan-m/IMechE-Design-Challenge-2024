@@ -19,7 +19,7 @@ color_ranges = [
 ]
 
 # Open camera
-cap = cv2.VideoCapture(0)  # Use 0 for the default camera
+cap = cv2.VideoCapture(1)  # Use 0 for the default camera
 
 # Set desired fps and resolution
 desired_fps = 30
