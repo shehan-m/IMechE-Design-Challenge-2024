@@ -25,8 +25,33 @@ sudo apt-get install python3-opencv && sudo apt-get install fswebcam
 cd ~ && git clone https://github.com/shehan-m/IMechE-Design-Challenge-2024/
 ```
 
+## How to run code on startup
+
+- **Step 1:** \
+  Open the `rc.local` file using nano editor:
+
+```shell
+cd ~ && sudo nano /etc/rc.local
+```
+
+- **Step 2:** \
+  Make bash script executable:
+
+```shell
+sudo chmod +x /IMechE-Design-Challenge-2024/Firmware/startup.sh
+```
+
+- **Step 3:** \
+  Add the following commands above `exit 0`
+
+```shell
+sudo apt-get update && sudo apt-get install git -y
+```
 
 ## Electronics
+
+### Wiring Diagram
+![image](Electronics/schematic%20v02_bb.png)
 
 ### Limit switch
 
@@ -38,7 +63,7 @@ switch type: SPDT
 - Normally Open (NO): Connected to COM when the switch is pressed
 - Normally Closed (NC): Connected to COM when the switch is not pressed
 
-### Stepper Driver Current Limiting
+### Stepper driver current limiting
 
 Vref = Imax * 8 * Rs
 
