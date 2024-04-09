@@ -132,14 +132,17 @@ def calibrate_cm_to_steps():
     print("Place a known distance marker from the sensor.")
     
     while True:
-        steps = float(input("Enter the distance in steps: "))
+        steps = int(input("Enter the distance in steps: "))
+        dir = int(input("Enter direction: "))
+        speed = int(input("Enter speed: "))
         print(f'Moving motor {steps} steps...')
+        move_motor(dir, steps, 250)
         input("Press Enter to retry...")
 
 
 # Initialization and setup code
 print("Initializing target detector.")
-target_detector = TargetDetector(camera_index=0, desired_width=640, desired_height=480, debug_mode=True)
+#target_detector = TargetDetector(camera_index=0, desired_width=640, desired_height=480, debug_mode=True)
 
 print("Connecting to pigpio daemon.")
 try:
