@@ -107,6 +107,8 @@ pi.set_mode(ECHO_PIN, pigpio.INPUT)
 detector_thread = threading.Thread(target=target_detector.detect_targets)
 detector_thread.start()
 
+sleep(10)
+
 try:
     align(5)
 finally:
