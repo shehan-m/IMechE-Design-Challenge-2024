@@ -78,7 +78,7 @@ def align(req_consec_zero_count):
         else:
             consec_zero_count = 0  # Reset counter if displacement is outside threshold
             direction = 1 if y_offset > 0 else 0  # Determine direction based on displacement
-            move_motor(direction, abs(y_offset) * Y_OFFSET_TO_STEPS)  # Adjust alignment
+            move_motor(direction, abs(y_offset))  # Adjust alignment
             print("Adjusting alignment...")
 
         sleep(1)  # Short delay for displacement updates
@@ -107,10 +107,14 @@ pi.set_mode(ECHO_PIN, pigpio.INPUT)
 detector_thread = threading.Thread(target=target_detector.detect_targets)
 detector_thread.start()
 
+# Start the target detector and main code threads
+alignment_thread = threading.Thread(target=align(5))
+
 sleep(10)
 
 try:
-    align(5)
+    alignment_thread.start()
 finally:
     target_detector.release()
+    alignment_thread.join()
     detector_thread.join()
