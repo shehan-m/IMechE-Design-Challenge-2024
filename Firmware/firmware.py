@@ -1,6 +1,6 @@
 import threading
 from time import sleep, time
-from Firmware.target_detector import TargetDetector
+from target_detector import TargetDetector
 import pigpio
 import math
 
