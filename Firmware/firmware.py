@@ -2,6 +2,7 @@ import threading
 from time import sleep, time
 from Firmware.target_detector import TargetDetector
 import pigpio
+import math
 
 # Constants for navigation
 CM_TO_STEPS = 10  # Conversion factor from cm to steps
@@ -21,40 +22,43 @@ SWITCH_PIN = 16  # Normally Open (NO) Terminal of the switch
 TRIG_PIN = 17  # Ultrasonic sensor trigger pin
 ECHO_PIN = 18  # Ultrasonic sensor echo pin
 
-def move_motor(direction, steps, speed=500):
+def move_motor(direction, total_steps, max_speed=500, accel_steps=100):
     """
-    Moves the motor in the specified direction and steps at the given speed.
+    Moves the motor with an S-curve acceleration and deceleration profile.
 
     Args:
-        direction (int): The direction to move the motor (1 for forward, 0 for backward).
-        steps (int): The number of steps to move the motor.
-        speed (int, optional): The speed at which to move the motor. Defaults to 500 steps per second.
+        direction (int): Direction to move (1 for forward, 0 for backward).
+        total_steps (int): Total number of steps to move.
+        max_speed (int): Maximum speed in steps per second.
+        accel_steps (int): Steps over which to accelerate and decelerate.
     """
     pi.write(DIR_PIN, direction)
-    for _ in range(steps):
-        pi.write(STEP_PIN, 1)
-        sleep(1 / (2 * speed))
-        pi.write(STEP_PIN, 0)
-        sleep(1 / (2 * speed))
-
-def move_motor_pwm(direction, steps, speed=500):
-    """
-    Moves the motor a certain number of steps using PWM at the specified speed and direction.
-
-    Args:
-        direction (int): The direction to move the motor (1 for forward, 0 for backward).
-        steps (int): The number of steps to move the motor.
-        speed (int): The speed in Hz at which the motor should move.
-    """
-    pi.write(DIR_PIN, direction)  # Set direction
-
-    duration = steps / (speed * 1)  # Calculate the duration for the desired steps
-    pi.set_PWM_frequency(STEP_PIN, speed)  # Set the PWM frequency
-    pi.set_PWM_dutycycle(STEP_PIN, 128)  # Set to 50% duty cycle for movement
-
-    sleep(duration)  # Wait for movement to complete
     
-    pi.set_PWM_dutycycle(STEP_PIN, 0)  # Stop the motor
+    # Prepare S-curve acceleration parameters
+    accel_steps = min(accel_steps, total_steps // 2)
+    decel_start = total_steps - accel_steps
+    current_speed = 0
+
+    for step in range(total_steps):
+        phase_progress = step / accel_steps if step < accel_steps else (total_steps - step) / accel_steps
+
+        # Adjust acceleration based on an S-curve profile
+        accel_factor = (1 - math.cos(math.pi * phase_progress)) / 2  # Generates an S-curve shape factor
+
+        if step < accel_steps:  # Acceleration phase
+            current_speed = max_speed * accel_factor
+        elif step >= decel_start:  # Deceleration phase
+            current_speed = max_speed * accel_factor
+        else:
+            current_speed = max_speed  # Constant speed phase
+
+        delay = 1 / (2 * max(current_speed, 1))  # Ensure delay is never zero
+
+        # Move the motor one step
+        pi.write(STEP_PIN, 1)
+        sleep(delay)
+        pi.write(STEP_PIN, 0)
+        sleep(delay)
 
 def align(req_consec_zero_count):
     """
