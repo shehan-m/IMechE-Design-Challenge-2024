@@ -81,7 +81,7 @@ def align(req_consec_zero_count):
             move_motor(direction, abs(y_offset) * Y_OFFSET_TO_STEPS)  # Adjust alignment
             print("Adjusting alignment...")
 
-        sleep(0.1)  # Short delay for displacement updates
+        sleep(1)  # Short delay for displacement updates
 
 # Initialization and setup code
 print("Initializing target detector.")
