@@ -1,6 +1,7 @@
 from time import sleep, time
 from target_detector import TargetDetector
 import pigpio
+import threading
 
 # Constants for navigation
 CM_TO_STEPS = 10  # Conversion factor from cm to steps
@@ -102,4 +103,11 @@ pi.set_pull_up_down(SWITCH_PIN, pigpio.PUD_UP)
 pi.set_mode(TRIG_PIN, pigpio.OUTPUT)
 pi.set_mode(ECHO_PIN, pigpio.INPUT)
 
-align(5)
+# Start the target detector and main code threads
+detector_thread = threading.Thread(target=target_detector.detect_targets)
+detector_thread.start()
+
+try:
+    align(5)
+finally:
+    detector_thread.join()
