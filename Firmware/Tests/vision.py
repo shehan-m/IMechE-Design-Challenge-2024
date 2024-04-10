@@ -72,7 +72,7 @@ def align(req_consec_zero_count):
         y_offset = target_detector.get_y_displacement()
         print(f"Current Y offset: {y_offset}")
 
-        if abs(y_offset) <= 1:
+        if abs(y_offset) == 0:
             consec_zero_count += 1
             print(f"Alignment count: {consec_zero_count}/{req_consec_zero_count}")
         else:
@@ -110,4 +110,5 @@ detector_thread.start()
 try:
     align(5)
 finally:
+    target_detector.release()
     detector_thread.join()
