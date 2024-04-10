@@ -69,8 +69,9 @@ def calibrate_cm_to_steps():
         steps = int(input("Enter the distance in steps: "))
         dir = int(input("Enter direction: "))
         speed = int(input("Enter speed: "))
+        acel_steps = int(input("Enter acceleration steps: "))
         print(f'Moving motor {steps} steps...')
-        move_motor(dir, steps, 250)
+        move_motor(dir, steps, speed, acel_steps)
         input("Press Enter to retry...")
 
 print("Connecting to pigpio daemon.")
