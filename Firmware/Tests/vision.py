@@ -84,7 +84,7 @@ def align(req_consec_zero_count):
 
 # Initialization and setup code
 print("Initializing target detector.")
-target_detector = TargetDetector(camera_index=0, desired_width=640, desired_height=480, debug_mode=False)
+target_detector = TargetDetector(camera_index=0, desired_width=640, desired_height=480, debug_mode=True)
 
 print("Connecting to pigpio daemon.")
 try:
@@ -102,4 +102,4 @@ pi.set_pull_up_down(SWITCH_PIN, pigpio.PUD_UP)
 pi.set_mode(TRIG_PIN, pigpio.OUTPUT)
 pi.set_mode(ECHO_PIN, pigpio.INPUT)
 
-align()
+align(5)
