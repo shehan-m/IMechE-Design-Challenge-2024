@@ -23,7 +23,7 @@ PHASE_1_STOP_TIME = 7.5  # Stop time in phase 1 in seconds
 
 def move_motor(direction, total_steps, max_speed=500, accel_steps=100):
     """
-    Moves the motor with an S-curve acceleration and deceleration profile.
+    Moves the motor with constant acceleration and deceleration.
 
     Args:
         direction (int): Direction to move (1 for forward, 0 for backward).
@@ -33,27 +33,26 @@ def move_motor(direction, total_steps, max_speed=500, accel_steps=100):
     """
     pi.write(DIR_PIN, direction)
     
-    # Prepare S-curve acceleration parameters
+    # Ensure acceleration/deceleration phases don't exceed half the total steps
     accel_steps = min(accel_steps, total_steps // 2)
     decel_start = total_steps - accel_steps
+    speed_increment = max_speed / accel_steps  # Calculate speed increment for each step
+    
     current_speed = 0
 
     for step in range(total_steps):
-        phase_progress = step / accel_steps if step < accel_steps else (total_steps - step) / accel_steps
-
-        # Adjust acceleration based on an S-curve profile
-        accel_factor = (1 - math.cos(math.pi * phase_progress)) / 2  # Generates an S-curve shape factor
-
         if step < accel_steps:  # Acceleration phase
-            current_speed = max_speed * accel_factor
+            current_speed += speed_increment
         elif step >= decel_start:  # Deceleration phase
-            current_speed = max_speed * accel_factor
-        else:
-            current_speed = max_speed  # Constant speed phase
+            current_speed -= speed_increment
 
-        delay = 1 / (2 * max(current_speed, 1))  # Ensure delay is never zero
-
-        # Move the motor one step
+        # Ensure speed does not exceed max_speed during acceleration or drop below 0 during deceleration
+        current_speed = max(1, min(current_speed, max_speed))
+        
+        # Calculate delay for current speed
+        delay = 1 / (2 * current_speed)
+        
+        # Move the motor one step at the current speed
         pi.write(STEP_PIN, 1)
         sleep(delay)
         pi.write(STEP_PIN, 0)
