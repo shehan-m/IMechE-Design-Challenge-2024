@@ -1,82 +1,70 @@
 import cv2
 import numpy as np
-import logging
-import time
 
 class TargetDetector:
-    def __init__(self, camera_index=0, desired_width=320, desired_height=240, debug_mode=False):
+    def __init__(self, camera_index=0, desired_width=720, desired_height=720, debug_mode=False):
         self.cap = self.initialize_camera(camera_index, desired_width, desired_height)
-        self.color_ranges = [((100, 100, 100), (120, 255, 255))]  # blue color range
         self.debug_mode = debug_mode
-        self.y_displacement = 0  # Store y displacement of the most recently detected target
-        self.inter_target_detected = False # Flag to indicate target detection
-        self.inter_detection_time = None # Time of first target detection
+        self.x_displacement = 0
+        self.blue_hsv_lower = np.array([110, 50, 50])
+        self.blue_hsv_upper = np.array([130, 255, 255])
 
     def initialize_camera(self, camera_index, width, height):
         cap = cv2.VideoCapture(camera_index)
         if not cap.isOpened():
-            logging.error("Failed to open camera")
-            raise Exception("Cannot open camera")
+            raise IOError("Cannot open webcam")
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         return cap
 
-    def centroid(self, contour):
-        M = cv2.moments(contour)
-        if M['m00'] != 0:
-            return int(M['m10'] / M['m00']), int(M['m01'] / M['m00'])
-        return None
-
     def detect_targets(self):
-        while True:
-            ret, frame = self.cap.read()
-            if not ret:
-                logging.error("Failed to read frame")
-                return
+        ret, frame = self.cap.read()
+        if not ret:
+            raise IOError("Cannot read from webcam")
 
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            largest_y_displacement = None  # To hold the y displacement of the largest detected target
+        # Convert the image to the HSV color space
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        
+        # Create a mask for the blue color using the predefined range
+        mask = cv2.inRange(hsv, self.blue_hsv_lower, self.blue_hsv_upper)
 
-            for color_range in self.color_ranges:
-                mask = cv2.inRange(hsv, np.array(color_range[0]), np.array(color_range[1]))
-                contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Find contours in the mask
+        contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-                if contours:
-                    largest_contour = max(contours, key=cv2.contourArea)
-                    center = self.centroid(largest_contour)
-                    if center:
-                        self.inter_target_detected = True
-                        self.inter_detection_time = time.time()
+        valid_contours = []
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            perimeter = cv2.arcLength(cnt, True)
+            if perimeter == 0:
+                continue  # Avoid division by zero
+            circularity = 4 * np.pi * (area / (perimeter * perimeter))
+            if area > 100 and circularity > 0.7:  # Adjust thresholds as needed
+                valid_contours.append(cnt)
 
-                        y_displacement = center[1] - (frame.shape[0] // 2)
-                        largest_y_displacement = y_displacement  # Update with the latest y displacement
-                        if self.debug_mode:
-                            # Draw the contour and centroid for debugging
-                            cv2.drawContours(frame, [largest_contour], -1, (0, 255, 0), 2)
-                            cv2.circle(frame, center, 5, (255, 0, 0), -1)
+        if valid_contours:
+            # Find the largest contour, assumed to be the target
+            largest_contour = max(valid_contours, key=cv2.contourArea)
+            moments = cv2.moments(largest_contour)
+            if moments["m00"] != 0:
+                center_x = int(moments["m10"] / moments["m00"])
+                center_y = int(moments["m01"] / moments["m00"])
+                self.x_displacement = center_x - (frame.shape[1] // 2)
 
-            if largest_y_displacement is not None:
-                self.y_displacement = largest_y_displacement
-
-            if self.debug_mode:
-                cv2.imshow("Debug Stream", frame)
-                cv2.waitKey(1)
-            
-            time.sleep(0.1)
-
-    def get_y_displacement(self):
-        return self.y_displacement
-    
-    def get_inter_target_detection_time(self):
-        if self.inter_target_detected:
-            return self.inter_detection_time
+                if self.debug_mode:
+                    # Draw the center of the target
+                    cv2.circle(frame, (center_x, center_y), 5, (0, 255, 0), -1)
+                    # Draw center line of the frame
+                    cv2.line(frame, (frame.shape[1] // 2, 0), (frame.shape[1] // 2, frame.shape[0]), (0, 0, 255), 2)
+                    # Show the frame with the detected target
+                    cv2.imshow('Target Detection', frame)
+                    cv2.waitKey(1)
         else:
-            return None
+            self.x_displacement = None  # Reset displacement when no valid targets are detected
+
+    def get_x_displacement(self):
+        return self.x_displacement
 
     def release(self):
         self.cap.release()
-
-    def show_frame(self, frame, window_name="Frame"):
-        if self.debug_mode and frame is not None:
-            cv2.imshow(window_name, frame)
-            cv2.waitKey(1)
+        if self.debug_mode:
+            cv2.destroyAllWindows()
