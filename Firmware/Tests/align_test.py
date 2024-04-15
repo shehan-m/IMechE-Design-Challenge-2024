@@ -78,13 +78,13 @@ def align():
                 consecutive_aligned = 0  # Reset the counter if it's not aligned
 
             if steps_needed != 0:
-                direction = 1 if steps_needed > 0 else 0  # Determine direction
+                direction = 1 if x_displacement > 0 else 0  # Determine direction
                 move_motor(direction, abs(steps_needed))
                 print(f"Moved {abs(steps_needed)} steps {'right' if direction else 'left'} to align.")
         else:
             consecutive_aligned = 0  # Reset if no target is detected
         
-        sleep(0.25)  # Small delay to prevent high CPU usage
+        sleep(0.1)  # Small delay to prevent high CPU usage
 
     print("Camera aligned with target centre.")
 
@@ -96,7 +96,7 @@ def align():
 
 # Initialization and setup code
 print("Initializing target detector.")
-target_detector = TargetDetector(camera_index=-1, desired_width=640, desired_height=480, debug_mode=False)
+target_detector = TargetDetector(camera_index=-1, desired_width=640, desired_height=480, debug_mode=True)
 
 print("Connecting to pigpio daemon.")
 try:
@@ -107,8 +107,6 @@ except:
 # Configure GPIO modes and initial settings
 pi.set_mode(DIR_PIN, pigpio.OUTPUT)
 pi.set_mode(STEP_PIN, pigpio.OUTPUT)
-frequency = 500  # Set a default frequency for stepper movement
-pi.set_PWM_frequency(STEP_PIN, frequency)
 
 pi.set_mode(SWITCH_PIN, pigpio.INPUT)
 pi.set_pull_up_down(SWITCH_PIN, pigpio.PUD_UP)
