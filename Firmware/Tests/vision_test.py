@@ -4,7 +4,7 @@ import time
 
 def main():
     print("Initializing target detector.")
-    target_detector = TargetDetector(camera_index=0, desired_width=640, desired_height=480, debug_mode=True)
+    target_detector = TargetDetector(camera_index=-1, desired_width=640, desired_height=480, debug_mode=True)
     stop_event = threading.Event()
 
     def run_detection():
