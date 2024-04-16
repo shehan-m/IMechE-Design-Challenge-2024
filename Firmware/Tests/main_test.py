@@ -1,5 +1,6 @@
 import threading
-from time import sleep, time
+from time import sleep
+import time
 from target_detector import TargetDetector
 import pigpio
 import math
@@ -86,13 +87,13 @@ def move_motor(direction, total_steps, max_speed=500, accel_steps=100):
 
 def align(initial_direction):
      # Set up a slow PWM for initial search
-    search_speed = 100  # Define a slow search speed in steps per second
-    pwm_duty_cycle = int(255 * (search_speed / frequency))  # Calculate the duty cycle based on frequency
-    pi.set_PWM_dutycycle(STEP_PIN, pwm_duty_cycle)  # Apply the duty cycle
     pi.write(DIR_PIN, initial_direction)
+    pi.set_PWM_dutycycle(STEP_PIN, 128)  # PWM 1/2 On 1/2 Off
+    pi.set_PWM_frequency(STEP_PIN, 100)  # 500 pulses per second
 
     print("Searching for target...")
     while target_detector.get_x_displacement() is None:
+        print(target_detector.get_x_displacement())
         # The motor will move slowly due to the PWM signal
         sleep(0.1)  # This delay is just to prevent a tight loop, can be adjusted
 
@@ -143,6 +144,7 @@ def main():
     pi.write(DIR_PIN, 1)  # Set direction forward
 
     initial_distance = get_distance()
+    print(initial_distance)
 
     align(1)
 
