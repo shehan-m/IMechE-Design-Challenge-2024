@@ -144,6 +144,8 @@ def main():
 
     initial_distance = get_distance()
 
+    align(1)
+
     # Gradual deceleration as the object approaches
     while True:
         distance = get_distance()
