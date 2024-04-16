@@ -22,6 +22,30 @@ SWITCH_PIN = 16  # Normally Open (NO) Terminal of the switch
 TRIG_PIN = 17  # Ultrasonic sensor trigger pin
 ECHO_PIN = 18  # Ultrasonic sensor echo pin
 
+def get_distance():
+    # Send a 10 microsecond pulse to start the measurement
+    pi.gpio_trigger(TRIG_PIN, 10, 1)  # Trigger pulse of 10 microseconds
+    start_time = time.time()
+
+    # Wait for the echo to start
+    while pi.read(ECHO_PIN) == 0:
+        start = time.time()
+        if start - start_time > 0.5:  # Timeout after 500ms
+            return None
+
+    # Wait for the echo to end
+    while pi.read(ECHO_PIN) == 1:
+        stop = time.time()
+        if stop - start_time > 0.5:  # Timeout after 500ms
+            return None
+
+    # Calculate the duration of the echo pulse
+    elapsed = stop - start
+    # Calculate distance in mm (speed of sound is 343 m/s or 343000 mm/s)
+    distance = (elapsed * 343000) / 2
+    return distance
+
+
 def move_motor(direction, total_steps, max_speed=500, accel_steps=100):
     """
     Moves the motor with an S-curve acceleration and deceleration profile.
@@ -60,7 +84,22 @@ def move_motor(direction, total_steps, max_speed=500, accel_steps=100):
         pi.write(STEP_PIN, 0)
         sleep(delay)
 
-def align():
+def align(initial_direction):
+     # Set up a slow PWM for initial search
+    search_speed = 100  # Define a slow search speed in steps per second
+    pwm_duty_cycle = int(255 * (search_speed / frequency))  # Calculate the duty cycle based on frequency
+    pi.set_PWM_dutycycle(STEP_PIN, pwm_duty_cycle)  # Apply the duty cycle
+    pi.write(DIR_PIN, initial_direction)
+
+    print("Searching for target...")
+    while target_detector.get_x_displacement() is None:
+        # The motor will move slowly due to the PWM signal
+        sleep(0.1)  # This delay is just to prevent a tight loop, can be adjusted
+
+    # Stop the motor once the target is in frame
+    pi.set_PWM_dutycycle(STEP_PIN, 0)
+    print("Target detected, starting alignment...")
+
     consecutive_aligned = 0  # Counter for how many times the target is consecutively aligned
     
     while consecutive_aligned <= REQ_CONSEC:
@@ -84,7 +123,7 @@ def align():
         else:
             consecutive_aligned = 0  # Reset if no target is detected
         
-        sleep(0.25)  # Small delay to prevent high CPU usage
+        sleep(0.1)  # Small delay to prevent high CPU usage
 
     print("Camera aligned with target centre.")
 
@@ -94,13 +133,65 @@ def align():
     print("Waiting")
     sleep(PHASE_1_STOP_TIME)
 
+    # Make sure to stop PWM after alignment is complete
+    pi.set_PWM_dutycycle(STEP_PIN, 0)
+
 def main():
-    #TODO: 
-    pass
+    print("Moving towards the target until distance is 200 mm.")
+    initial_speed = 500  # speed in steps per second
+    slow_speed = 50     # slower speed for precise movement
+    pi.write(DIR_PIN, 1)  # Set direction forward
+
+    initial_distance = get_distance()
+
+    # Gradual deceleration as the object approaches
+    while True:
+        distance = get_distance()
+        if distance is None:
+            continue  # skip the iteration if distance could not be measured
+
+        if distance > 200:
+            # Use full speed
+            pwm_duty_cycle = int(255 * (initial_speed / frequency))
+        elif distance <= 200 and distance > 50:
+            # Begin to slow down
+            scale_factor = (distance - 50) / 150  # Scale factor between 0 and 1
+            current_speed = slow_speed + (initial_speed - slow_speed) * scale_factor
+            pwm_duty_cycle = int(255 * (current_speed / frequency))
+        else:
+            # Minimum speed to inch forward
+            pwm_duty_cycle = int(255 * (slow_speed / frequency))
+
+        pi.set_PWM_dutycycle(STEP_PIN, pwm_duty_cycle)  # Apply the duty cycle
+
+        if distance <= 50:
+            break  # Exit loop when within 50 mm
+
+        sleep(0.1)  # Polling delay
+
+    # Stop the motor when within 50 mm
+    pi.set_PWM_dutycycle(STEP_PIN, 0)
+    print("Reached 50 mm distance.")
+
+    # Move slowly until the limit switch is activated
+    print("Advancing until the limit switch is actuated.")
+    pi.set_PWM_dutycycle(STEP_PIN, int(255 * (slow_speed / frequency)))
+    while pi.read(SWITCH_PIN):
+        sleep(0.01)  # Polling delay
+    pi.set_PWM_dutycycle(STEP_PIN, 0)  # Stop the motor
+
+    # Move back and align with first target
+    move_motor(0, 0.9 * initial_distance * MM_TO_STEPS, 500, 200)
+
+    align(0)
+
+    # Align with second target
+    move_motor(0, ORIGIN_CLEARANCE, 500, 200)
+    align(1)
 
 # Initialization and setup code
 print("Initializing target detector.")
-target_detector = TargetDetector(camera_index=0, desired_width=640, desired_height=480, debug_mode=False)
+target_detector = TargetDetector(camera_index=-1, desired_width=640, desired_height=480, debug_mode=False)
 
 print("Connecting to pigpio daemon.")
 try:
@@ -124,7 +215,7 @@ pi.set_mode(ECHO_PIN, pigpio.INPUT)
 detector_thread = threading.Thread(target=target_detector.detect_targets)
 detector_thread.start()
 
-main_thread = threading.Thread(target=align)
+main_thread = threading.Thread(target=main)
 main_thread.start()
 
 main_thread.join()
