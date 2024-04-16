@@ -92,9 +92,11 @@ def align(initial_direction):
     pi.set_PWM_frequency(STEP_PIN, 100)  # 500 pulses per second
 
     print("Searching for target...")
-    while target_detector.get_x_displacement() is None:
-        print(target_detector.get_x_displacement())
-        # The motor will move slowly due to the PWM signal
+    while True:
+        x_offset = target_detector.get_x_displacement()
+        print(x_offset)
+        if x_offset is not None:
+            break  # Exit loop if x_offset is not None, meaning target is found
         sleep(0.1)  # This delay is just to prevent a tight loop, can be adjusted
 
     # Stop the motor once the target is in frame
