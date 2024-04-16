@@ -105,24 +105,24 @@ def align(initial_direction):
 
     consecutive_aligned = 0  # Counter for how many times the target is consecutively aligned
     
-    while consecutive_aligned <= REQ_CONSEC:
+    while consecutive_aligned < REQ_CONSEC:
         x_displacement = target_detector.get_x_displacement()
+        print(x_displacement)
         
         # Check if target is detected
         if x_displacement is not None:
             # Convert x_displacement to steps for the motor
-            steps_needed = int(x_displacement * X_OFFSET_TO_STEPS)
+            steps_needed = abs(x_displacement * X_OFFSET_TO_STEPS)
             
             # If steps needed is too small, consider it aligned
-            if abs(steps_needed) == 0:
+            if steps_needed == 0:
                 consecutive_aligned += 1
             else:
                 consecutive_aligned = 0  # Reset the counter if it's not aligned
-
-            if steps_needed != 0:
-                direction = 1 if steps_needed > 0 else 0  # Determine direction
-                move_motor(direction, abs(steps_needed))
+                direction = 1 if x_displacement > 0 else 0  # Determine direction
+                move_motor(direction, steps_needed)
                 print(f"Moved {abs(steps_needed)} steps {'right' if direction else 'left'} to align.")
+
         else:
             consecutive_aligned = 0  # Reset if no target is detected
         
