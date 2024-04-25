@@ -59,21 +59,25 @@ class AsyncTargetDetector:
 async def get_distance(pi):
     pi.gpio_trigger(TRIG_PIN, 10, 1)  # Trigger pulse of 10 microseconds
     start_time = time.time()
-    start = None  # Initialize start variable to None or a default value
 
+    # Give more time for start signal detection
+    timeout_duration = 1.0  # Increase the timeout to 1 second
+    
+    start = None
     while pi.read(ECHO_PIN) == 0:
-        start = time.time()  # Update start when ECHO_PIN is low
-        if start - start_time > 0.5:  # Timeout after 500ms
-            return None
-
+        start = time.time()
+        if start - start_time > timeout_duration:  # Extended timeout
+            return None  # Return None if no start signal is detected
+    
+    stop = None
     while pi.read(ECHO_PIN) == 1:
-        stop = time.time()  # Update stop when ECHO_PIN is high
-        if stop - start_time > 0.5:
+        stop = time.time()
+        if stop - start_time > timeout_duration:
             return None
-
-    if start is None:
-        raise Exception("Ultrasonic sensor start signal not detected")
-
+    
+    if start is None or stop is None:
+        raise Exception("Ultrasonic sensor signal not detected")
+    
     # Calculate the distance in mm
     elapsed = stop - start
     distance = (elapsed * 343000) / 2
@@ -139,7 +143,7 @@ async def smooth_acceleration(pi, start_freq, end_freq, duration):
         elapsed_ratio = 0.5 * (1 - math.cos(math.pi * (t / duration)))  # Generate S-curve profile
         
         # Determine current frequency based on S-curve
-        current_freq = start_freq + elapsed_ratio * (end_freq - start_freq)
+        current_freq = int(start_freq + elapsed_ratio * (end_freq - start_freq))
         
         pi.set_PWM_frequency(STEP_PIN, current_freq)
         await asyncio.sleep(0.1)  # Short delay to avoid excessive loop iterations
