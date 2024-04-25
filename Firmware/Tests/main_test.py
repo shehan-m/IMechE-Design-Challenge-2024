@@ -56,32 +56,39 @@ class AsyncTargetDetector:
             await asyncio.sleep(0.1)
 
 # Async function to get the distance from an ultrasonic sensor
-async def get_distance(pi):
-    pi.gpio_trigger(TRIG_PIN, 10, 1)  # Trigger pulse of 10 microseconds
-    start_time = time.time()
+async def get_distance(pi, timeout=1.0):
+    """
+    Measures the distance using an ultrasonic sensor asynchronously.
 
-    # Give more time for start signal detection
-    timeout_duration = 1.0  # Increase the timeout to 1 second
+    Args:
+        pi (pigpio.pi): An instance of the pigpio library.
+        timeout (float): Maximum time (in seconds) to wait for a signal.
+
+    Returns:
+        int: Distance in millimeters, or None if timeout.
+    """
+    # Send a 10-microsecond pulse to start the measurement
+    pi.gpio_trigger(TRIG_PIN, 10, 1)
     
-    start = None
+    # Wait for the echo start
+    start_time = time.time()
     while pi.read(ECHO_PIN) == 0:
-        start = time.time()
-        if start - start_time > timeout_duration:  # Extended timeout
-            return None  # Return None if no start signal is detected
-    
-    stop = None
+        start_time = time.time()
+        if time.time() - start_time > timeout:
+            return None  # Timeout if no start signal
+
+    # Wait for the echo end
+    end_time = start_time
     while pi.read(ECHO_PIN) == 1:
-        stop = time.time()
-        if stop - start_time > timeout_duration:
-            return None
+        end_time = time.time()
+        if end_time - start_time > timeout:
+            return None  # Timeout if signal doesn't end
+
+    # Calculate the distance in millimeters
+    elapsed_time = end_time - start_time
+    distance = (elapsed_time * 343000) / 2  # Dividing by 2 for one-way distance
     
-    if start is None or stop is None:
-        raise Exception("Ultrasonic sensor signal not detected")
-    
-    # Calculate the distance in mm
-    elapsed = stop - start
-    distance = (elapsed * 343000) / 2
-    return distance
+    return round(distance)  # Return the distance rounded to the nearest whole number
 
 # Async function to move the motor with S-curve acceleration
 async def move_motor(pi, direction, total_steps, max_speed=500, accel_ratio=0.5):
