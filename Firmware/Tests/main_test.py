@@ -59,16 +59,20 @@ class AsyncTargetDetector:
 async def get_distance(pi):
     pi.gpio_trigger(TRIG_PIN, 10, 1)  # Trigger pulse of 10 microseconds
     start_time = time.time()
+    start = None  # Initialize start variable to None or a default value
 
     while pi.read(ECHO_PIN) == 0:
-        start = time.time()
+        start = time.time()  # Update start when ECHO_PIN is low
         if start - start_time > 0.5:  # Timeout after 500ms
             return None
 
     while pi.read(ECHO_PIN) == 1:
-        stop = time.time()
+        stop = time.time()  # Update stop when ECHO_PIN is high
         if stop - start_time > 0.5:
             return None
+
+    if start is None:
+        raise Exception("Ultrasonic sensor start signal not detected")
 
     # Calculate the distance in mm
     elapsed = stop - start
