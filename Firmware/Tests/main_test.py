@@ -213,6 +213,8 @@ async def main():
         # Phase 1
         initial_distance = await get_distance(pi)
 
+        # await align(pi, target_detector, 1)
+
         pi.write(DIR_PIN, 1) # Set motor direction
         pi.set_PWM_dutycycle(STEP_PIN, 128)
 
@@ -232,6 +234,7 @@ async def main():
         while True:
             isPressed = await check_switch(pi)
             if isPressed:
+                print("Switch Pressed")
                 pi.set_PWM_dutycycle(STEP_PIN, 0)
                 break
 
