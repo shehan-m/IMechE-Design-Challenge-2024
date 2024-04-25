@@ -90,6 +90,21 @@ async def get_distance(pi, timeout=1.0):
     
     return round(distance)  # Return the distance rounded to the nearest whole number
 
+async def check_switch(pi, check_interval=0.1):
+    """
+    Monitors if a button is pressed at regular intervals.
+    
+    Args:
+        pi (pigpio.pi): An instance of the pigpio library.
+        check_interval (float): Time in seconds between checks.
+    
+    Returns:
+        True or False
+    """
+    await asyncio.sleep(check_interval)  # Wait before checking again
+    return pi.read(SWITCH_PIN) == 1
+
+
 # Async function to move the motor with S-curve acceleration
 async def move_motor(pi, direction, total_steps, max_speed=500, accel_ratio=0.5):
     """
@@ -215,7 +230,8 @@ async def main():
         await smooth_acceleration(pi, 500, 100, 2)  # Gradual deceleration over 2 seconds
 
         while True:
-            if pi.read(SWITCH_PIN):
+            isPressed = await check_switch(pi)
+            if isPressed:
                 pi.set_PWM_dutycycle(STEP_PIN, 0)
                 break
 
