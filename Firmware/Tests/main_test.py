@@ -1,16 +1,19 @@
-import asyncio
 import cv2
 import numpy as np
-import pigpio
-import math
+
 import time
+import pigpio
+from gpiozero import Button, DistanceSensor
+
+import queue
+import threading
 
 # GPIO PINS
 STEP_PIN = 21
 DIR_PIN = 20
 SWITCH_PIN = 16
-TRIG_PIN = 17
-ECHO_PIN = 18
+TRIG_PIN = 4
+ECHO_PIN = 17
 
 # NAV CONSTANTS
 SAFE_DIST = 250 # in mm
@@ -22,237 +25,136 @@ REQ_CONSEC = 5
 # SPECFICIATION
 PHASE_1_STOP_TIME = 7.5
 
-# Async Target Detector class
-class AsyncTargetDetector:
-    def __init__(self, camera_index=0, desired_width=720, desired_height=720):
-        self.cap = self.initialize_camera(camera_index, desired_width, desired_height)
+# Create a queue to hold target offsets
+target_offset_queue = queue.Queue()
 
-    def initialize_camera(self, camera_index, width, height):
-        cap = cv2.VideoCapture(camera_index)
-        if not cap.isOpened():
-            raise IOError("Cannot open webcam")
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        return cap
-
-    async def detect_targets(self):
-        while True:
-            ret, frame = self.cap.read()
-            if not ret:
-                await asyncio.sleep(0.1)
-                continue  # Retry if no frame is captured
-
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(hsv, np.array([110, 50, 50]), np.array([130, 255, 255]))
-
-            contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            if contours:
-                largest_contour = max(contours, key=cv2.contourArea)
-                moments = cv2.moments(largest_contour)
-                if moments["m00"] != 0:
-                    center_x = int(moments["m10"] / moments["m00"])
-                    return center_x - (frame.shape[1] // 2)
-
-            await asyncio.sleep(0.1)
-
-# Async function to get the distance from an ultrasonic sensor
-async def get_distance(pi, timeout=1.0):
-    """
-    Measures the distance using an ultrasonic sensor asynchronously.
-
-    Args:
-        pi (pigpio.pi): An instance of the pigpio library.
-        timeout (float): Maximum time (in seconds) to wait for a signal.
-
-    Returns:
-        int: Distance in millimeters, or None if timeout.
-    """
-    # Send a 10-microsecond pulse to start the measurement
-    pi.gpio_trigger(TRIG_PIN, 10, 1)
+def detector(fps_limit=30, width=640, height=480, debug=False):
+    cap = cv2.VideoCapture(0)
     
-    # Wait for the echo start
-    start_time = time.time()
-    while pi.read(ECHO_PIN) == 0:
-        start_time = time.time()
-        if time.time() - start_time > timeout:
-            return None  # Timeout if no start signal
-
-    # Wait for the echo end
-    end_time = start_time
-    while pi.read(ECHO_PIN) == 1:
-        end_time = time.time()
-        if end_time - start_time > timeout:
-            return None  # Timeout if signal doesn't end
-
-    # Calculate the distance in millimeters
-    elapsed_time = end_time - start_time
-    distance = (elapsed_time * 343000) / 2  # Dividing by 2 for one-way distance
+    # Set the properties for resolution
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
     
-    return round(distance)  # Return the distance rounded to the nearest whole number
+    # Set the frame rate limit
+    cap.set(cv2.CAP_PROP_FPS, fps_limit)
 
-async def check_switch(pi, check_interval=0.1):
-    """
-    Monitors if a button is pressed at regular intervals.
-    
-    Args:
-        pi (pigpio.pi): An instance of the pigpio library.
-        check_interval (float): Time in seconds between checks.
-    
-    Returns:
-        True or False
-    """
-    await asyncio.sleep(check_interval)  # Wait before checking again
-    return pi.read(SWITCH_PIN) == 1
+    while True:
+        _, frame = cap.read()
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
+        # Blue color
+        low_blue = np.array([94, 80, 2])
+        high_blue = np.array([126, 255, 255])
+        blue_mask = cv2.inRange(hsv_frame, low_blue, high_blue)
+        blue = cv2.bitwise_and(frame, frame, mask=blue_mask)
 
-# Async function to move the motor with S-curve acceleration
-async def move_motor(pi, direction, total_steps, max_speed=500, accel_ratio=0.5):
-    """
-    Moves the motor with a gradual acceleration profile to reduce traction loss.
-    
-    Args:
-        pi (pigpio.pi): Pigpio instance for GPIO control.
-        direction (int): Motor direction (1 for forward, 0 for backward).
-        total_steps (int): Total steps to move.
-        max_speed (int): Maximum speed in steps per second.
-        accel_ratio (float): Ratio of steps used for acceleration and deceleration.
-    """
-    pi.write(DIR_PIN, direction)
-    
-    # Calculate the number of steps for acceleration and deceleration
-    accel_steps = int(total_steps * accel_ratio)
-    decel_start = total_steps - accel_steps
-    
-    current_speed = 0  # Start speed
-    for step in range(total_steps):
-        # Determine phase progress based on step count and acceleration ratio
-        if step < accel_steps:
-            # Acceleration phase with an S-curve profile
-            phase_progress = step / accel_steps
-            accel_factor = (1 - math.cos(math.pi * phase_progress)) / 2
-        elif step >= decel_start:
-            # Deceleration phase with an S-curve profile
-            phase_progress = (total_steps - step) / accel_steps
-            accel_factor = (1 - math.cos(math.pi * phase_progress)) / 2
-        else:
-            # Constant speed phase
-            accel_factor = 1.0
-        
-        current_speed = max_speed * accel_factor
-        delay = 1 / (2 * max(current_speed, 1))  # Ensure delay is never zero
-        
-        pi.write(STEP_PIN, 1)
-        await asyncio.sleep(delay)
-        pi.write(STEP_PIN, 0)
-        await asyncio.sleep(delay)
+        median = cv2.medianBlur(blue, 15)
 
-async def smooth_acceleration(pi, start_freq, end_freq, duration):
-    """
-    Smoothly changes the PWM frequency from start_freq to end_freq with an S-curve profile over a specified duration.
-    
-    Args:
-        pi (pigpio.pi): Pigpio instance for GPIO control.
-        start_freq (int): Initial PWM frequency.
-        end_freq (int): Final PWM frequency.
-        duration (float): Duration over which to change the frequency.
-    """
-    start_time = time.time()
-    end_time = start_time + duration
-    
-    while time.time() < end_time:
-        # Calculate elapsed time ratio
-        t = time.time() - start_time
-        elapsed_ratio = 0.5 * (1 - math.cos(math.pi * (t / duration)))  # Generate S-curve profile
-        
-        # Determine current frequency based on S-curve
-        current_freq = int(start_freq + elapsed_ratio * (end_freq - start_freq))
-        
-        pi.set_PWM_frequency(STEP_PIN, current_freq)
-        await asyncio.sleep(0.1)  # Short delay to avoid excessive loop iterations
+        # Find contours
+        gray = cv2.cvtColor(median, cv2.COLOR_BGR2GRAY)
+        contours, _ = cv2.findContours(gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-# Async function to align with the target
-async def align(pi, target_detector, direction):
-    consecutive_aligned = 0
+        if contours:
+            # Find the largest contour
+            largest_contour = max(contours, key=cv2.contourArea)
 
-    pi.write(DIR_PIN, direction)
-    pi.set_PWM_dutycycle(STEP_PIN, 128)  # PWM 1/2 On 1/2 Off
-    await smooth_acceleration(pi, 0, 100, 1)
-
-    while consecutive_aligned < REQ_CONSEC:
-        x_displacement = await target_detector.detect_targets()
-        if x_displacement is not None:
-            await smooth_acceleration(pi, 100, 0, 2)
-            steps_needed = abs(x_displacement * X_OFFSET_TO_STEPS)
-            
-            if steps_needed == 0:
-                consecutive_aligned += 1
+            # Get the moments to calculate the center of the contour
+            M = cv2.moments(largest_contour)
+            if M["m00"] != 0:
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
             else:
-                direction = 1 if x_displacement > 0 else 0
-                await move_motor(pi, direction, steps_needed, 100)
-                consecutive_aligned = 0
-        else:
-            await smooth_acceleration(pi, 0, 100, 1)
-            consecutive_aligned = 0
+                cX, cY = 0, 0
 
-        await asyncio.sleep(0.1)
+            # Calculate x displacement from the center of the frame
+            center_frame_x = width // 2
+            displacement_x = cX - center_frame_x
+            target_offset_queue.put(displacement_x)
 
-# Main asynchronous function
-async def main():
-    pi = pigpio.pi()  # Initialize pigpio
-    target_detector = AsyncTargetDetector(camera_index=0, desired_width=640, desired_height=480)
+            if debug:
+                # Display the displacement on the frame
+                cv2.putText(frame, f"Displacement: {displacement_x}px", (50, 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-    # Configure GPIO modes
-    pi.set_mode(STEP_PIN, pigpio.OUTPUT)
-    pi.set_mode(DIR_PIN, pigpio.OUTPUT)
-    pi.set_mode(SWITCH_PIN, pigpio.INPUT)
-    pi.set_pull_up_down(SWITCH_PIN, pigpio.PUD_UP)
-    pi.set_mode(TRIG_PIN, pigpio.OUTPUT)
-    pi.set_mode(ECHO_PIN, pigpio.INPUT)
+                # Draw the largest contour and its center
+                cv2.drawContours(frame, [largest_contour], -1, (0, 255, 0), 3)
+                cv2.circle(frame, (cX, cY), 7, (255, 255, 255), -1)
+                cv2.putText(frame, "center", (cX - 20, cY - 20),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
-    try:
-        # Phase 1
-        initial_distance = await get_distance(pi)
+        if debug:
+            cv2.imshow("Blue", median)
+            cv2.imshow("Frame", frame)
 
-        # await align(pi, target_detector, 1)
+        key = cv2.waitKey(1)
+        if key == 27:  # Escape key
+            break
 
-        pi.write(DIR_PIN, 1) # Set motor direction
-        pi.set_PWM_dutycycle(STEP_PIN, 128)
+    cap.release()
+    if debug:
+        cv2.destroyAllWindows()
 
-        # Initial acceleration to 500 pulses per second
-        await smooth_acceleration(pi, 0, 500, 5)  # Gradual acceleration over 2 seconds
+def distance():
+    return ultrasonic.distance
 
-        # Continue moving until the distance is below the safe threshold
-        while True:
-            current_distance = await get_distance(pi)
-            if current_distance < SAFE_DIST:
-                break  # Exit when distance is below the safe threshold
-            await asyncio.sleep(0.1)  # Delay to avoid busy loop
-        
-        # Gradual deceleration to 100 pulses per second
-        await smooth_acceleration(pi, 500, 100, 2)  # Gradual deceleration over 2 seconds
+def move_motor(pi, STEP_PIN=STEP_PIN, DIR_PIN=DIR_PIN, final_delay=100, start_delay=5000, steps=100, run_time=1):
+    # Create waveform for final speed
+    wf = [
+        pigpio.pulse(1 << STEP_PIN, 0, final_delay),
+        pigpio.pulse(0, 1 << STEP_PIN, final_delay)
+    ]
+    pi.wave_add_generic(wf)
+    wid0 = pi.wave_create()
 
-        while True:
-            isPressed = await check_switch(pi)
-            if isPressed:
-                print("Switch Pressed")
-                pi.set_PWM_dutycycle(STEP_PIN, 0)
-                break
+    # Build initial ramp
+    wf = []
+    for delay in range(start_delay, final_delay, -steps):
+        wf.append(pigpio.pulse(1 << STEP_PIN, 0, delay))
+        wf.append(pigpio.pulse(0, 1 << STEP_PIN, delay))
+    pi.wave_add_generic(wf)
+    wid1 = pi.wave_create()
 
-        # Move the motor back by the initial distance
-        await move_motor(pi, 0, initial_distance * MM_TO_STEPS, 500, 0.2)
+    # Send ramp, then repeat final rate
+    pi.wave_send_once(wid1)
+    offset = pi.wave_get_micros()  # Duration of the ramp in microseconds
+    time.sleep(float(offset) / 1000000)  # Wait for ramp to complete
 
-        # Align with the target
-        await align(pi, target_detector, 0)
-        
-        time.sleep(PHASE_1_STOP_TIME)  # Pause for a specific duration
+    pi.wave_send_repeat(wid0)  # Start repeating final speed waveform
+    time.sleep(run_time)  # Run motor at final speed for specified time
 
-        # Phase 2
-        # Align with the second target
-        await move_motor(pi, 1, TARGET_CLEARANCE_DIST * MM_TO_STEPS, 200)
-        await align(pi, target_detector, 1)
-    finally:
-        pi.set_PWM_dutycycle(STEP_PIN, 0)  # Ensure the motor stops
-        pi.stop()  # Stop pigpio instance
+    # Cleanup and stop
+    pi.wave_tx_stop()  # Stop waveform
+    pi.wave_delete(wid0)  # Delete waveform
+    pi.wave_delete(wid1)  # Delete waveform
 
-# Run the main function
-asyncio.run(main())
+def align():
+    if not target_offset_queue.empty():
+        offset = target_offset_queue.get()
+
+def cycle():
+    # Move forward until switch is pressed
+    # Return to origin 
+    pass
+
+pi = pigpio.pi()
+if not pi.connected:
+    print("Error connecting to pigpio daemon. Is the daemon running?")
+
+pi.set_mode(STEP_PIN, pigpio.OUTPUT)
+pi.wave_clear()
+
+ultrasonic = DistanceSensor(echo=ECHO_PIN, trigger=TRIG_PIN)
+limit_switch = Button(SWITCH_PIN)
+
+#limit_switch.isPressed()
+#print("The button was pressed!")
+
+try:
+    detector_thread = threading.Thread(target=detector)
+except KeyboardInterrupt:
+    print("KeyboardInterrupt detected, stopping all threads.")
+finally:
+    detector_thread.join()
+
+# Example usage with debug mode enabled
+detector(fps_limit=30, width=640, height=480, debug=False)
