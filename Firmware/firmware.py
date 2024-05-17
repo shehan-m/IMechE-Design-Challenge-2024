@@ -123,7 +123,7 @@ def main_code():
     print(f"{steps_to_wall} steps to wall")
 
     try:
-        move_motor_pwm(1, steps_to_wall)  # Move towards the wall
+        move_motor(1, steps_to_wall)  # Move towards the wall
 
         while pi.read(SWITCH_PIN):  # Wait until the switch is pressed
             sleep(0.01)
@@ -132,7 +132,7 @@ def main_code():
         pi.set_PWM_dutycycle(STEP_PIN, 0)  # Stop the motor
 
         sleep(0.5)  # Short delay before moving back
-        move_motor_pwm(0, steps_to_wall)  # Move back to the original position
+        move_motor(0, steps_to_wall)  # Move back to the original position
 
         align(REQ_CONSEC)  # Alignment process
 
@@ -140,7 +140,7 @@ def main_code():
         sleep(PHASE_1_STOP_TIME)
 
         print("Moving forward clearance distance.")
-        move_motor_pwm(1, ORIGIN_CLEARANCE)  # Move forward for clearance
+        move_motor(1, ORIGIN_CLEARANCE)  # Move forward for clearance
 
         # Further operations omitted for brevity
     except KeyboardInterrupt:
