@@ -46,7 +46,7 @@ def generate_ramp(pi, start_frequency, final_frequency, steps, dir=1, run_time=N
         for wave_id in wid:
             pi.wave_delete(wave_id)
 
-def move_motor(ramp, start_frequency, final_frequency, steps, dir=1, run_time=None):
+def move_motor(start_frequency, final_frequency, steps, dir=1, run_time=None):
     """Generate ramp wave forms.
     ramp:  List of [Frequency, Steps]
     """
@@ -69,14 +69,6 @@ def move_motor(ramp, start_frequency, final_frequency, steps, dir=1, run_time=No
         pi.wave_add_generic(wf)
         wid.append(pi.wave_create())
         current_frequency += frequency_step  # increment or decrement frequency
-
-    # Generate a chain of waves
-    chain = []
-    for i in range(steps):
-        steps = ramp[i][1]
-        x = steps & 255
-        y = steps >> 8
-        chain += [255, 0, wid[i], 255, 1, x, y]
     
     # Generate a chain of waves
     chain = []
@@ -134,7 +126,7 @@ try:
     # Ramp up
     pi.write(DIR_PIN, 1)
     #generate_ramp_author([[320, 200], [500, 400], [800, 500], [1000, 700], [1600, 900], [2000, 10000]])
-    move_motor()
+    move_motor(100, 2000, 50, 1, None)
     time.sleep(30)  # For demonstration, run the motor then stop
 finally:
     stop_motor(pi)
