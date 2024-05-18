@@ -59,8 +59,8 @@ def generate_ramp_author(ramp):
         frequency = ramp[i][0]
         micros = int(500000 / frequency)
         wf = []
-        wf.append(pigpio.pulse(1 << STEP, 0, micros))  # pulse on
-        wf.append(pigpio.pulse(0, 1 << STEP, micros))  # pulse off
+        wf.append(pigpio.pulse(1 << STEP_PIN, 0, micros))  # pulse on
+        wf.append(pigpio.pulse(0, 1 << STEP_PIN, micros))  # pulse off
         pi.wave_add_generic(wf)
         wid[i] = pi.wave_create()
 
@@ -81,6 +81,7 @@ def stop_motor(pi):
 try:
     #generate_ramp(pi, 100, 1000, 50, dir=1, run_time=None)
     # Ramp up
+    pi.write(DIR_PIN, 1)
     generate_ramp_author([[320, 200],
             [500, 400],
             [800, 500],
