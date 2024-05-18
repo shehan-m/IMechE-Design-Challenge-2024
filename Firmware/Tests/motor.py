@@ -46,7 +46,58 @@ def generate_ramp(pi, start_frequency, final_frequency, steps, dir=1, run_time=N
         for wave_id in wid:
             pi.wave_delete(wave_id)
 
-def generate_ramp_author(ramp):
+def move_motor(ramp, start_frequency, final_frequency, steps, dir=1, run_time=None):
+    """Generate ramp wave forms.
+    ramp:  List of [Frequency, Steps]
+    """
+    pi.wave_clear()     # clear existing waves
+    pi.write(DIR_PIN, dir)
+
+    # Calculate frequency increments
+    frequency_step = (final_frequency - start_frequency) / steps
+    current_frequency = start_frequency
+
+    wid = []
+    wf = []
+
+    for _ in range(steps):
+        micros = int(500000 / current_frequency)  # microseconds for half a step
+        wf = [
+            pigpio.pulse(1 << STEP_PIN, 0, micros),
+            pigpio.pulse(0, 1 << STEP_PIN, micros)
+        ]
+        pi.wave_add_generic(wf)
+        wid.append(pi.wave_create())
+        current_frequency += frequency_step  # increment or decrement frequency
+
+    # Generate a chain of waves
+    chain = []
+    for i in range(steps):
+        steps = ramp[i][1]
+        x = steps & 255
+        y = steps >> 8
+        chain += [255, 0, wid[i], 255, 1, x, y]
+    
+    # Generate a chain of waves
+    chain = []
+    for wave_id in wid:
+        chain += [255, 0, wave_id, 255, 1, 1, 0]  # Transmit each wave once
+
+    # Handle run time
+    if run_time is not None:
+        time.sleep(run_time)
+        pi.wave_tx_stop()  # Stop waveform transmission
+    else:
+        # If no run_time specified, repeat the last waveform indefinitely
+        chain += [255, 0, wid[-1]] * 2  # Repeat last waveform indefinitely
+
+    pi.wave_chain(chain)  # Transmit chain
+
+    # Clean up waveforms
+    global last_wave_ids
+    last_wave_ids = wid  # Store wave IDs globally to allow stopping later
+
+def generate_ramp_author(ramp, start_frequency, final_frequency, steps, dir=1, run_time=None):
     """Generate ramp wave forms.
     ramp:  List of [Frequency, Steps]
     """
@@ -82,12 +133,8 @@ try:
     #generate_ramp(pi, 100, 1000, 50, dir=1, run_time=None)
     # Ramp up
     pi.write(DIR_PIN, 1)
-    generate_ramp_author([[320, 200],
-            [500, 400],
-            [800, 500],
-            [1000, 700],
-            [1600, 900],
-            [2000, 10000]])
+    #generate_ramp_author([[320, 200], [500, 400], [800, 500], [1000, 700], [1600, 900], [2000, 10000]])
+    move_motor()
     time.sleep(30)  # For demonstration, run the motor then stop
 finally:
     stop_motor(pi)
