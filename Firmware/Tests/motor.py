@@ -60,14 +60,14 @@ def move_motor(start_frequency, final_frequency, steps, dir=1, run_time=None):
     wid = []
     wf = []
 
-    for _ in range(steps):
+    for i in range(steps):
         micros = int(500000 / current_frequency)  # microseconds for half a step
         wf = [
             pigpio.pulse(1 << STEP_PIN, 0, micros),
             pigpio.pulse(0, 1 << STEP_PIN, micros)
         ]
         pi.wave_add_generic(wf)
-        wid.append(pi.wave_create())
+        wid[i]=pi.wave_create()
         current_frequency += frequency_step  # increment or decrement frequency
     
     # Generate a chain of waves
@@ -75,15 +75,16 @@ def move_motor(start_frequency, final_frequency, steps, dir=1, run_time=None):
     for wave_id in wid:
         chain += [255, 0, wave_id, 255, 1, 1, 0]  # Transmit each wave once
 
+    pi.wave_chain(chain)  # Transmit chain
+
     # Handle run time
     if run_time is not None:
+        pi.wave_send_repeat(wid[-1])
         time.sleep(run_time)
         pi.wave_tx_stop()  # Stop waveform transmission
     else:
         # If no run_time specified, repeat the last waveform indefinitely
-        chain += [255, 0, wid[-1]] * 2  # Repeat last waveform indefinitely
-
-    pi.wave_chain(chain)  # Transmit chain
+        pi.wave_send_repeat(wid[-1])
 
     # Clean up waveforms
     global last_wave_ids
