@@ -67,7 +67,7 @@ def move_motor(start_frequency, final_frequency, steps, dir=1, run_time=None):
             pigpio.pulse(0, 1 << STEP_PIN, micros)
         ]
         pi.wave_add_generic(wf)
-        wid[i]=pi.wave_create()
+        wid[i-1]=pi.wave_create()
         current_frequency += frequency_step  # increment or decrement frequency
     
     # Generate a chain of waves
