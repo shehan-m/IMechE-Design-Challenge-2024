@@ -5,10 +5,10 @@ import pigpio
 STEP_PIN = 21
 DIR_PIN = 20
 
-def move_motor(pi, STEP_PIN, DIR_PIN, start_frequency=100, final_frequency=5000, steps=100, run_time=None):
+def move_motor(pi, STEP_PIN, DIR_PIN, DIR=1, start_frequency=100, final_frequency=5000, steps=100, run_time=None):
     global wave_ids
 
-    pi.write(DIR_PIN, pi.read(1))
+    pi.write(DIR_PIN, DIR)
 
     start_delay = 1 / start_frequency
     final_delay = 1 / final_frequency
@@ -78,7 +78,7 @@ pi.set_mode(DIR_PIN, pigpio.OUTPUT)
 pi.wave_clear()
 
 try:
-    move_motor(pi, STEP_PIN, DIR_PIN, 0, 500, 50, None)
+    move_motor(pi, STEP_PIN, DIR_PIN, 1, 0, 500, 50, None)
 except KeyboardInterrupt:
     print("interrupted")
 finally:

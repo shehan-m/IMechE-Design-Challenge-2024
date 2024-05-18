@@ -71,8 +71,9 @@ def align(req_consec_zero_count):
     consec_zero_count = 0  # Counter for consecutive zero-displacements
 
     while consec_zero_count < req_consec_zero_count:
-        y_offset = target_detector.get_y_displacement()
+        y_offset = target_detector.get_x_displacement()
         print(f"Current Y offset: {y_offset}")
+        if y_offset == None: y_offset = 1
 
         if abs(y_offset) <= 1:
             consec_zero_count += 1
