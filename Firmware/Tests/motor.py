@@ -9,24 +9,30 @@ pi.set_mode(STEP_PIN, pigpio.OUTPUT)
 pi.set_mode(DIR_PIN, pigpio.OUTPUT)
 
 def move_motor(start_frequency, final_frequency, steps, dir=1, run_time=None):
-    global last_wave_ids  # Declare global at the start of the function
-
+    """Generate ramp waveforms from start to final frequency.
+    
+    Parameters:
+    - start_frequency: Starting frequency of the ramp.
+    - final_frequency: Ending frequency of the ramp.
+    - steps: Number of steps in the ramp.
+    - dir: Direction to move the motor (0 or 1).
+    - run_time: Time in seconds to run the motor at final frequency, None for indefinite run.
+    """
     if not pi.connected:
         print("Error connecting to pigpio daemon. Is the daemon running?")
         return
 
-    pi.wave_clear()
+    pi.wave_clear()  # clear existing waves
     pi.write(DIR_PIN, dir)
 
-    # Exponential ramp calculation for smoother acceleration
-    base = 1.05  # Smaller base for finer control
-    frequency_steps = [(base**i - 1) * (final_frequency - start_frequency) / (base**steps - 1) for i in range(steps)]
+    # Calculate frequency increments
+    frequency_step = (final_frequency - start_frequency) / steps
     current_frequency = start_frequency
 
     wid = []
 
-    for i in range(steps):
-        micros = int(500000 / (current_frequency + frequency_steps[i]))
+    for _ in range(steps):
+        micros = int(500000 / current_frequency)  # microseconds for half a step
         wf = [
             pigpio.pulse(1 << STEP_PIN, 0, micros),
             pigpio.pulse(0, 1 << STEP_PIN, micros)
@@ -34,26 +40,30 @@ def move_motor(start_frequency, final_frequency, steps, dir=1, run_time=None):
         pi.wave_add_generic(wf)
         wave_id = pi.wave_create()
         wid.append(wave_id)  # Append the new wave ID to the list
-        current_frequency += frequency_steps[i]
+        current_frequency += frequency_step  # increment or decrement frequency
     
-    # Generate a chain of waves with variable hold times
+    # Generate a chain of waves
     chain = []
-    for i, wave_id in enumerate(wid):
-        hold_time = max(int(100 * (steps - i) / steps), 1)  # Dynamic hold time
-        chain += [255, 0, wave_id, 255, 1, hold_time, 0]  # Apply dynamic hold time
+    for wave_id in wid:
+        chain += [255, 0, wave_id, 255, 1, 1, 0]  # Transmit each wave once
 
-    pi.wave_chain(chain)
+    pi.wave_chain(chain)  # Transmit chain
 
+    # Handle run time
     if run_time is not None:
         pi.wave_send_repeat(wid[-1])
         time.sleep(run_time)
-        pi.wave_tx_stop()
+        pi.wave_tx_stop()  # Stop waveform transmission
     else:
+        # If no run_time specified, repeat the last waveform indefinitely
         pi.wave_send_repeat(wid[-1])
 
-    last_wave_ids = wid
+    # Clean up waveforms
+    global last_wave_ids
+    last_wave_ids = wid  # Store wave IDs globally to allow stopping later
 
 def stop_motor():
+    """Stop any running waveforms and clean up."""
     global last_wave_ids
     pi.wave_tx_stop()  # Stop any waveform transmission
     if last_wave_ids is not None:
