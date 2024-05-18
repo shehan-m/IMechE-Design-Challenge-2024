@@ -58,7 +58,7 @@ def move_motor(start_frequency, final_frequency, steps, dir=1, run_time=None):
     current_frequency = start_frequency
 
     wid = []
-    wf = []
+    wf = [-1] * steps
 
     for i in range(steps):
         micros = int(500000 / current_frequency)  # microseconds for half a step
