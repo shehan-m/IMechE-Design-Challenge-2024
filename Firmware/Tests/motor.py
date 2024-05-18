@@ -1,85 +1,84 @@
-import time
 import pigpio
+import time
 
-# GPIO PINS
+# Define GPIO pins for the stepper motor
 STEP_PIN = 21
 DIR_PIN = 20
-
-def move_motor(pi, STEP_PIN, DIR_PIN, DIR=1, start_frequency=100, final_frequency=5000, steps=100, run_time=None):
-    global wave_ids
-
-    pi.write(DIR_PIN, DIR)
-
-    start_delay = 1 / start_frequency
-    final_delay = 1 / final_frequency
-
-    # Determine ramp direction
-    ramp_up = start_frequency < final_frequency
-
-    # Calculate ramp steps
-    if ramp_up:
-        step_size = (final_delay - start_delay) / steps
-    else:
-        step_size = (start_delay - final_delay) / steps
-
-    # Create waveform for final speed
-    wf = [
-        pigpio.pulse(1 << STEP_PIN, 0, int(final_delay * 1e6)),
-        pigpio.pulse(0, 1 << STEP_PIN, int(final_delay * 1e6))
-    ]
-    pi.wave_add_generic(wf)
-    wid0 = pi.wave_create()
-
-    # Build initial ramp
-    wf = []
-    delay = start_delay
-    for _ in range(steps):
-        wf.append(pigpio.pulse(1 << STEP_PIN, 0, int(delay * 1e6)))
-        wf.append(pigpio.pulse(0, 1 << STEP_PIN, int(delay * 1e6)))
-        if ramp_up:
-            delay += step_size
-        else:
-            delay -= step_size
-
-    pi.wave_add_generic(wf)
-    wid1 = pi.wave_create()
-
-    # Send ramp, then repeat final rate
-    pi.wave_send_once(wid1)
-    offset = pi.wave_get_micros()  # Duration of the ramp in microseconds
-    time.sleep(float(offset) / 1e6)  # Wait for ramp to complete
-
-    pi.wave_send_repeat(wid0)  # Start repeating final speed waveform
-
-    # If run_time is specified, run for that duration then stop, otherwise run indefinitely
-    if run_time is not None:
-        time.sleep(run_time)  # Run motor at final speed for specified time
-        pi.wave_tx_stop()  # Stop waveform after run_time
-        pi.wave_delete(wid0)  # Delete waveform
-        pi.wave_delete(wid1)  # Delete waveform
-    else:
-        # Leaving the motor running, cleanup will need to be handled externally
-        wave_ids.extend([wid0, wid1])
-        pass
-
-def stop_motor(pi):
-    global wave_ids
-    pi.wave_tx_stop()  # Stop any waveform transmission
-    for wid in wave_ids:
-        pi.wave_delete(wid)  # Clean up waveforms
-    wave_ids = []  # Clear the list after cleanup
-
 pi = pigpio.pi()
-if not pi.connected:
-    print("Error connecting to pigpio daemon. Is the daemon running?")
-
 pi.set_mode(STEP_PIN, pigpio.OUTPUT)
 pi.set_mode(DIR_PIN, pigpio.OUTPUT)
-pi.wave_clear()
 
-try:
-    move_motor(pi, STEP_PIN, DIR_PIN, 1, 0, 500, 50, None)
-except KeyboardInterrupt:
-    print("interrupted")
-finally:
-    pi.stop()
+def generate_ramp(pi, start_frequency, final_frequency, steps, dir=1, run_time=None):
+    """Generate and execute a ramp waveforms with automatic ramp up or down.
+    
+    Parameters:
+    - pi: The pigpio instance.
+    - start_frequency: Starting frequency of the ramp.
+    - final_frequency: Ending frequency of the ramp.
+    - steps: Number of steps in the ramp.
+    - dir: Direction to move the motor (0 or 1).
+    - run_time: Time in seconds to run the motor at final frequency, None for indefinite run.
+    """
+    pi.wave_clear()  # clear existing waves
+    pi.write(DIR_PIN, dir)  # set motor direction
+
+    # Calculate frequency increments
+    frequency_step = (final_frequency - start_frequency) / steps
+    current_frequency = start_frequency
+
+    wid = []
+    wf = []
+
+    for _ in range(steps):
+        micros = int(500000 / current_frequency)  # microseconds for half a step
+        wf = [
+            pigpio.pulse(1 << STEP_PIN, 0, micros),
+            pigpio.pulse(0, 1 << STEP_PIN, micros)
+        ]
+        pi.wave_add_generic(wf)
+        wid.append(pi.wave_create())
+        current_frequency += frequency_step  # increment or decrement frequency
+
+    # Chain waves
+    chain = []
+    for i in range(steps):
+        chain += [255, 0, wid[i], 255, 1, 1, 0]  # Transmit each wave once
+
+    # Continue the last waveform indefinitely if no run_time specified
+    if run_time is None:
+        chain += [255, 0, wid[-1]] * 2  # Repeat last waveform
+    pi.wave_chain(chain)  # transmit chain
+
+    if run_time is not None:
+        time.sleep(run_time)
+        pi.wave_tx_stop()  # stop waveform transmission
+    # Clean up after specified run time or if a stop function is called later
+    global last_wid
+    last_wid = wid
+
+def stop_motor(pi):
+    """Stop any running waveforms and clean up."""
+    global last_wid
+    pi.wave_tx_stop()  # Stop any waveform transmission
+    for wave_id in last_wid:
+        pi.wave_delete(wave_id)  # Clean up waveforms
+    last_wid = []
+
+if not pi.connected:
+    print("Error connecting to pigpio daemon. Is the daemon running?")
+else:
+    try:
+        # Set parameters for the ramp
+        start_freq = 100 # in Hz
+        final_freq = 1000 # in Hz
+        ramp_steps = 50 # number of steps in the ramp
+        # Generate and execute the ramp
+        generate_ramp(pi, start_freq, final_freq, ramp_steps, dir=1, run_time=None)
+
+        # For demonstration, let's assume we want to stop after 30 seconds
+        time.sleep(30)
+        stop_motor(pi)
+    except KeyboardInterrupt:
+        print("Interrupted by user")
+    finally:
+        pi.stop()  # Properly close the connection to the pigpio daemon
