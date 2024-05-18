@@ -60,13 +60,15 @@ def move_motor(start_frequency, final_frequency, steps, dir=1, run_time=None):
 
     # Clean up waveforms
     global last_wave_ids
-    last_wave_ids = wid # Store wave IDs globally to allow stopping later
+    last_wave_ids = wid  # Store wave IDs globally to allow stopping later
 
 def stop_motor():
     """Stop any running waveforms and clean up."""
     global last_wave_ids
     pi.wave_tx_stop()  # Stop any waveform transmission
-    pi.wave_delete(last_wave_ids)  # Clean up last waveform
+    if last_wave_ids is not None:
+        for wave_id in last_wave_ids:
+            pi.wave_delete(wave_id)  # Clean up each waveform individually
     last_wave_ids = None
 
 # Example usage:
