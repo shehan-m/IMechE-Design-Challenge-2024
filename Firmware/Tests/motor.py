@@ -76,4 +76,5 @@ else:
     try:
         move_motor(100, 2000, 50, 1, None)
     finally:
+        stop_motor()
         pi.stop()  # Properly close the connection to the pigpio daemon
