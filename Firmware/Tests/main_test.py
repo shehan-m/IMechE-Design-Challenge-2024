@@ -9,12 +9,13 @@ import queue
 import threading
 
 # GPIO PINS
+# GPIO PINS
 STEP_PIN = 21
 DIR_PIN = 20
 
 SWITCH_PIN = 16
-START_PIN = 0
-RESET_PIN = 0
+START_PIN = 23
+RESET_PIN = 24
 
 TRIG_PIN = 4
 ECHO_PIN = 17

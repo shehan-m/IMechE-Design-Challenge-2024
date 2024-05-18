@@ -2,12 +2,12 @@ from gpiozero import Button, DistanceSensor
 import time
 
 # GPIO PINS
-SWITCH_PIN = 16  # Assuming a real GPIO pin number is assigned here
-START_PIN = 17  # Assuming a real GPIO pin number is assigned here
-RESET_PIN = 18  # Assuming a real GPIO pin number is assigned here
+SWITCH_PIN = 16
+START_PIN = 23
+RESET_PIN = 24
 
 TRIG_PIN = 4
-ECHO_PIN = 27
+ECHO_PIN = 17
 
 # Initialize the distance sensor and buttons
 ultrasonic = DistanceSensor(echo=ECHO_PIN, trigger=TRIG_PIN)
