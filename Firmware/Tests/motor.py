@@ -46,12 +46,47 @@ def generate_ramp(pi, start_frequency, final_frequency, steps, dir=1, run_time=N
         for wave_id in wid:
             pi.wave_delete(wave_id)
 
+def generate_ramp_author(ramp):
+    """Generate ramp wave forms.
+    ramp:  List of [Frequency, Steps]
+    """
+    pi.wave_clear()     # clear existing waves
+    length = len(ramp)  # number of ramp levels
+    wid = [-1] * length
+
+    # Generate a wave per ramp level
+    for i in range(length):
+        frequency = ramp[i][0]
+        micros = int(500000 / frequency)
+        wf = []
+        wf.append(pigpio.pulse(1 << STEP, 0, micros))  # pulse on
+        wf.append(pigpio.pulse(0, 1 << STEP, micros))  # pulse off
+        pi.wave_add_generic(wf)
+        wid[i] = pi.wave_create()
+
+    # Generate a chain of waves
+    chain = []
+    for i in range(length):
+        steps = ramp[i][1]
+        x = steps & 255
+        y = steps >> 8
+        chain += [255, 0, wid[i], 255, 1, x, y]
+
+    pi.wave_chain(chain)  # Transmit chain.
+
 def stop_motor(pi):
     pi.wave_tx_stop()
     pi.wave_clear()
 
 try:
-    generate_ramp(pi, 100, 1000, 50, dir=1, run_time=None)
+    #generate_ramp(pi, 100, 1000, 50, dir=1, run_time=None)
+    # Ramp up
+    generate_ramp_author([[320, 200],
+            [500, 400],
+            [800, 500],
+            [1000, 700],
+            [1600, 900],
+            [2000, 10000]])
     time.sleep(30)  # For demonstration, run the motor then stop
 finally:
     stop_motor(pi)
