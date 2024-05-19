@@ -17,7 +17,7 @@ SWITCH_PIN = 16
 START_PIN = 23
 RESET_PIN = 24
 
-TRIG_PIN = 4
+TRIG_PIN = 27
 ECHO_PIN = 17
 
 # NAV CONSTANTS
@@ -220,7 +220,7 @@ def cycle():
         time.sleep(0.1)  # Short delay to reduce sensor noise and CPU load
 
     # Return to the origin (for simplicity, assume this is reverse of travel_distance)
-    move_motor(pi, STEP_PIN, DIR_PIN, start_frequency=500, final_frequency=1000, steps=50, dir=0, run_time=(end_time - start_time) + 20)
+    move_motor(start_frequency=500, final_frequency=1000, steps=50, dir=0, run_time=(end_time - start_time) + 20)
 
     # Align with the origin / target
     align()
