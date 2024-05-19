@@ -1,44 +1,40 @@
-import pigpio
-from time import time, sleep
+from gpiozero import Button, DistanceSensor
+import time
 
+# GPIO PINS
+SWITCH_PIN = 16
+START_PIN = 23
+RESET_PIN = 24
 
-TRIG_PIN = 17
-ECHO_PIN = 18
+TRIG_PIN = 27
+ECHO_PIN = 17
 
-def measure_distance():
-    # Send a 10us pulse to start the measurement
-    pi.gpio_trigger(TRIG_PIN, 10, 1)
-
-    # Wait for the echo start
-    start_time = time()
-    while pi.read(ECHO_PIN) == 0:
-        start_time = time()
-
-    # Wait for the echo end
-    end_time = time()
-    while pi.read(ECHO_PIN) == 1:
-        end_time = time()
-
-    # Calculate the distance
-    elapsed_time = end_time - start_time
-    distance = (elapsed_time * 343000) / 2  # Speed of sound is ~343000 mm/s at sea level
-
-    return round(distance)
-
-# Connect to pigiod daemon
-print("Connecting to pigpio daemon.")
-try:
-    pi = pigpio.pi()
-except:
-    print("Could not connect to pigpio daemon")
-
-# Set up ultrasonic sensor pins
-pi.set_mode(TRIG_PIN, pigpio.OUTPUT)
-pi.set_mode(ECHO_PIN, pigpio.INPUT)
+# Initialize the distance sensor and buttons
+ultrasonic = DistanceSensor(echo=ECHO_PIN, trigger=TRIG_PIN)
+limit_switch = Button(SWITCH_PIN)
+start_button = Button(START_PIN)
+reset_button = Button(RESET_PIN)
 
 try:
     while True:
-        print(measure_distance())
-        sleep(0.5)
+        # Measure distance
+        distance = ultrasonic.distance * 100  # Convert from meters to centimeters
+        print(f"Distance: {distance:.1f} cm")
+
+        # Check if the limit switch is pressed
+        if limit_switch.is_pressed:
+            print("Limit switch is pressed.")
+
+        # Check if the start button is pressed
+        if start_button.is_pressed:
+            print("Start button is pressed.")
+
+        # Check if the reset button is pressed
+        if reset_button.is_pressed:
+            print("Reset button is pressed.")
+
+        # Wait a little before the next read
+        time.sleep(0.5)
+
 except KeyboardInterrupt:
-    print("stopped")
+    print("Program stopped manually.")
