@@ -9,7 +9,6 @@ import queue
 import threading
 
 # GPIO PINS
-# GPIO PINS
 STEP_PIN = 21
 DIR_PIN = 20
 
@@ -21,10 +20,10 @@ TRIG_PIN = 27
 ECHO_PIN = 17
 
 # NAV CONSTANTS
-SAFE_DIST = 250 # in mm
-TARGET_CLEARANCE_TIME = 300 # in mm
-X_OFFSET_CONV_FACTOR = 10
-MM_TO_STEPS = 10
+SAFE_DIST = 150 # in mm
+TARGET_CLEARANCE_TIME = 150 # in mm
+X_OFFSET_CONV_FACTOR = 1
+DATUM_OFFSET = 100
 REQ_CONSEC = 5
 
 # SPECFICIATION
@@ -104,7 +103,7 @@ def detector(fps_limit=30, width=640, height=480, debug=False):
         cv2.destroyAllWindows()
 
 def distance():
-    return ultrasonic.distance / 1000
+    return ultrasonic.distance * 10
 
 def move_motor(start_frequency, final_frequency, steps, dir=1, run_time=None):
     """Generate ramp waveforms from start to final frequency.
@@ -196,6 +195,13 @@ def align():
     # Stop the motor once aligned
     pi.write(STEP_PIN, 0)  # Ensuring no more steps are triggered
 
+    # Align with datum
+    for _ in range(DATUM_OFFSET):
+        pi.gpio_trigger(STEP_PIN, 10, 1)
+        time.sleep(0.001)
+    
+    pi.write(STEP_PIN, 0)
+
 def cycle():
     global wave_ids
 
@@ -220,7 +226,7 @@ def cycle():
         time.sleep(0.1)  # Short delay to reduce sensor noise and CPU load
 
     # Return to the origin (for simplicity, assume this is reverse of travel_distance)
-    move_motor(start_frequency=500, final_frequency=1000, steps=50, dir=0, run_time=(end_time - start_time) + 20)
+    move_motor(start_frequency=100, final_frequency=1000, steps=50, dir=0, run_time=(end_time - start_time) + 20)
 
     # Align with the origin / target
     align()
