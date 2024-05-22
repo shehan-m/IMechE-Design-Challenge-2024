@@ -1,0 +1,15 @@
+Team 64, University of Edinburgh
+IMechE Design Challenge 2024 Scottish Regionals
+**README**
+
+There are multiple files uploaded to Mashroom. The following files are as per requirement:
+CAD STEP AP203 file -> CAD Model as requested
+Bill of Materials -> in PDF as requested
+Poster -> in PDF as requested
+PowerPoint Presentation -> in mp4 as requested
+
+The following extra files are uploaded for for ease of understanding. Should you require more clarity, feel free to have a look:
+CAD Model Pictures -> show colour and logo placements
+Bill of Materials -> in Excel for better representation
+
+If you have any concerns about the materials, feel free to contact me at G.S.Hardeep-Singh@sms.ed.ac.uk
